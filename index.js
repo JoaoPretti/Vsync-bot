@@ -18,7 +18,7 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
 
-const arquivo = path.join(__dirname, 'registros.json');
+const arquivo = path.join(__dirname, 'data/registros.json');
 
 function salvarRegistro(dados) {
   let registros = [];
