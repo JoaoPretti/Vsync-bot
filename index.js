@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const fs = require('fs');
 const path = require('path');
 const {
@@ -11,8 +13,6 @@ const {
   StringSelectMenuOptionBuilder,
   ChannelType
 } = require('discord.js');
-
-const config = require('./config.json');
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
@@ -83,7 +83,7 @@ client.on('interactionCreate', async interaction => {
 
       const imagem = foto?.url || link;
 
-      const canal = await client.channels.fetch(config.canalRegistrosId);
+      const canal = await client.channels.fetch(process.env.CANAL_REGISTROS_ID);
 
       const embed = new EmbedBuilder()
         .setTitle('📦 Novo registro')
@@ -131,4 +131,4 @@ client.on('interactionCreate', async interaction => {
   }
 });
 
-client.login(config.token);
+client.login(process.env.DISCORD_TOKEN);
