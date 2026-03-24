@@ -12,7 +12,7 @@ const ITENS = [
 
 const commands = [
   new SlashCommandBuilder()
-    .setName('registrar')
+    .setName('registrar_farm')
     .setDescription('Registra um item com quantidade e foto')
     .addStringOption(option =>
       option.setName('item').setDescription('Item').setRequired(true).addChoices(...ITENS)
@@ -29,8 +29,17 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName('painel')
-    .setDescription('Abre o painel central')
+    .setDescription('Abre o painel central'),
+
+  new SlashCommandBuilder()
+    .setName('relatorio_semanal')
+    .setDescription('Mostra seus relatórios semanais'),
+
+  new SlashCommandBuilder()
+    .setName('testar_relatorio')
+    .setDescription('Executa manualmente o relatório semanal para teste')
 ].map(cmd => cmd.toJSON());
+
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 

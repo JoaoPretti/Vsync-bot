@@ -16,6 +16,26 @@ function initDatabase() {
       criado_em TEXT NOT NULL
     )
   `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS metas_semanais (
+      usuario_id TEXT PRIMARY KEY,
+      usuario_tag TEXT NOT NULL,
+      meta INTEGER NOT NULL DEFAULT 0,
+      atualizado_em TEXT NOT NULL
+    )
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS relatorios_semanais (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      usuario_id TEXT NOT NULL,
+      usuario_tag TEXT NOT NULL,
+      semana_referencia TEXT NOT NULL,
+      total_itens INTEGER NOT NULL DEFAULT 0,
+      criado_em TEXT NOT NULL
+    )
+  `);
 }
 
 module.exports = initDatabase;
