@@ -1,7 +1,5 @@
 require('dotenv').config();
 
-const fs = require('fs');
-const path = require('path');
 const {
   Client,
   GatewayIntentBits,
@@ -14,19 +12,53 @@ const {
   ChannelType
 } = require('discord.js');
 
+const db = require('./database/db');
+const initDatabase = require('./database/init');
+
+initDatabase();
+
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
 
-const arquivo = path.join(__dirname, 'data/registros.json');
+function salvarRegistroBanco(dados) {
+  const stmt = db.prepare(`
+    INSERT INTO registros (
+      tipo,
+      usuario_tag,
+      usuario_id,
+      item,
+      quantidade,
+      imagem,
+      acao,
+      categoria,
+      status,
+      criado_em
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
 
-function salvarRegistro(dados) {
-  let registros = [];
-  if (fs.existsSync(arquivo)) {
-    registros = JSON.parse(fs.readFileSync(arquivo, 'utf8') || '[]');
-  }
-  registros.push(dados);
-  fs.writeFileSync(arquivo, JSON.stringify(registros, null, 2));
+  stmt.run(
+    dados.tipo,
+    dados.usuarioTag,
+    dados.usuarioId,
+    dados.item || null,
+    dados.quantidade ?? null,
+    dados.imagem || null,
+    dados.acao || null,
+    dados.categoria || null,
+    dados.status || 'pendente',
+    dados.criadoEm
+  );
+}
+
+function listarUltimosRegistros(limite = 10) {
+  const stmt = db.prepare(`
+    SELECT * FROM registros
+    ORDER BY id DESC
+    LIMIT ?
+  `);
+
+  return stmt.all(limite);
 }
 
 function criarPainel() {
@@ -98,12 +130,15 @@ client.on('interactionCreate', async interaction => {
 
       await canal.send({ embeds: [embed] });
 
-      salvarRegistro({
+      salvarRegistroBanco({
+        tipo: 'registro_item',
+        usuarioTag: interaction.user.tag,
+        usuarioId: interaction.user.id,
         item,
         quantidade,
-        usuario: interaction.user.tag,
-        imagem,
-        data: new Date()
+        imagem: imagem || null,
+        status: 'pendente',
+        criadoEm: new Date().toISOString()
       });
 
       return interaction.reply({
@@ -124,10 +159,22 @@ client.on('interactionCreate', async interaction => {
   }
 
   if (interaction.isStringSelectMenu()) {
-    return interaction.reply({
-      content: `Ação escolhida: ${interaction.values[0]}`,
-      ephemeral: true
-    });
+    const acao = interaction.values[0];
+
+salvarRegistroBanco({
+  tipo: 'acao_bau',
+  usuarioTag: interaction.user.tag,
+  usuarioId: interaction.user.id,
+  acao,
+  categoria: 'bau',
+  status: 'pendente',
+  criadoEm: new Date().toISOString()
+});
+
+return interaction.reply({
+  content: `✅ Ação registrada: ${acao}`,
+  ephemeral: true
+});
   }
 });
 
