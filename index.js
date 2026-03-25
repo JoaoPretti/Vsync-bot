@@ -431,6 +431,12 @@ function criarMenuAdicionarBau() {
    BOT READY
 ========================= */
 
+console.log('Evento ready foi registrado.');
+
+client.once('ready', () => {
+  console.log(`✅ Bot online como ${client.user.tag}`);
+});
+
 client.once('ready', () => {
   console.log(`Bot online como ${client.user.tag}`);
 
