@@ -1,15 +1,10 @@
-const { DatabaseSync } = require('node:sqlite');
-const path = require('path');
-const fs = require('fs');
+const { Pool } = require('pg');
 
-const dataDir = path.join(__dirname, '..', 'data');
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
 
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-}
-
-const dbPath = path.join(dataDir, 'registros.db');
-
-const db = new DatabaseSync(dbPath);
-
-module.exports = db;
+module.exports = pool;

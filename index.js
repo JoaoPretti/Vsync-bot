@@ -1,3 +1,7 @@
+(async () => {
+  await initDatabase();
+})();
+
 require('dotenv').config();
 
 const cron = require('node-cron');
@@ -15,7 +19,7 @@ const {
 const db = require('./database/db');
 const initDatabase = require('./database/init');
 
-initDatabase();
+await initDatabase();
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
@@ -25,57 +29,47 @@ const client = new Client({
    FUNÇÕES DO BANCO
 ========================= */
 
-function salvarRegistroBanco(dados) {
-  const stmt = db.prepare(`
+async function salvarRegistroBanco(dados) {
+  await db.query(`
     INSERT INTO registros (
-      tipo,
-      usuario_tag,
-      usuario_id,
-      item,
-      quantidade,
-      imagem,
-      acao,
-      categoria,
-      status,
-      criado_em
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  stmt.run(
+      tipo, usuario_tag, usuario_id, item,
+      quantidade, imagem, acao, categoria,
+      status, criado_em
+    )
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+  `, [
     dados.tipo,
     dados.usuarioTag,
     dados.usuarioId,
-    dados.item || null,
-    dados.quantidade ?? null,
-    dados.imagem || null,
-    dados.acao || null,
-    dados.categoria || null,
-    dados.status || 'pendente',
+    dados.item,
+    dados.quantidade,
+    dados.imagem,
+    dados.acao,
+    dados.categoria,
+    dados.status,
     dados.criadoEm
-  );
+  ]);
 }
 
-function buscarRegistrosFarmPorUsuario(usuarioId) {
-  const stmt = db.prepare(`
+async function buscarRegistrosFarmPorUsuario(usuarioId) {
+  const result = await db.query(`
     SELECT *
     FROM registros
-    WHERE usuario_id = ?
-      AND tipo = 'farm'
+    WHERE usuario_id = $1 AND tipo = 'farm'
     ORDER BY id DESC
-  `);
+  `, [usuarioId]);
 
-  return stmt.all(usuarioId);
+  return result.rows;
 }
 
-function buscarTotalFarmPorUsuario(usuarioId) {
-  const stmt = db.prepare(`
+async function buscarTotalFarmPorUsuario(usuarioId) {
+  const result = await db.query(`
     SELECT COALESCE(SUM(quantidade), 0) AS total
     FROM registros
-    WHERE usuario_id = ?
-      AND tipo = 'farm'
-  `);
+    WHERE usuario_id = $1 AND tipo = 'farm'
+  `, [usuarioId]);
 
-  return stmt.get(usuarioId).total;
+  return result.rows[0].total;
 }
 
 function buscarUsuariosComFarm() {
@@ -98,36 +92,31 @@ function resetarFarmUsuario(usuarioId) {
   stmt.run(usuarioId);
 }
 
-function salvarRelatorioSemanal(usuarioId, usuarioTag, semanaReferencia, totalItens) {
-  const stmt = db.prepare(`
+async function salvarRelatorioSemanal(usuarioId, usuarioTag, semana, total) {
+  await db.query(`
     INSERT INTO relatorios_semanais (
-      usuario_id,
-      usuario_tag,
-      semana_referencia,
-      total_itens,
-      criado_em
-    ) VALUES (?, ?, ?, ?, ?)
-  `);
-
-  stmt.run(
+      usuario_id, usuario_tag, semana_referencia, total_itens, criado_em
+    )
+    VALUES ($1,$2,$3,$4,$5)
+  `, [
     usuarioId,
     usuarioTag,
-    semanaReferencia,
-    totalItens,
-    new Date().toISOString()
-  );
+    semana,
+    total,
+    new Date()
+  ]);
 }
 
-function buscarRelatoriosUsuario(usuarioId) {
-  const stmt = db.prepare(`
+async function buscarRelatoriosUsuario(usuarioId) {
+  const result = await db.query(`
     SELECT *
     FROM relatorios_semanais
-    WHERE usuario_id = ?
+    WHERE usuario_id = $1
     ORDER BY criado_em DESC
     LIMIT 52
-  `);
+  `, [usuarioId]);
 
-  return stmt.all(usuarioId);
+  return result.rows;
 }
 
 function manterUltimos52RelatoriosPorUsuario(usuarioId) {
