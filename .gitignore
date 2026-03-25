@@ -3,3 +3,4 @@ config.json
 registros.json
 .env
 database.db
+data/registros.db
