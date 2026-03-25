@@ -253,11 +253,6 @@ function criarPainel() {
       .setCustomId('lavagem_pista')
       .setLabel('Lavagem Pista')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('💲'),
-    new ButtonBuilder()
-      .setCustomId('lavagem_taxa')
-      .setLabel('Lavagem Taxa')
-      .setStyle(ButtonStyle.Secondary)
       .setEmoji('💲')
   );
 
@@ -689,7 +684,6 @@ client.on('interactionCreate', async interaction => {
       if (
         interaction.customId === 'lavagem_parceria' ||
         interaction.customId === 'lavagem_pista' ||
-        interaction.customId === 'lavagem_taxa' ||
         interaction.customId === 'ver_todos_itens'
       ) {
         return interaction.reply({
