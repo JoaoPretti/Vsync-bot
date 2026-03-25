@@ -1,6 +1,7 @@
 const db = require('./db');
 
 async function initDatabase() {
+  console.log('INIT 1 - criando tabela registros');
   await db.query(`
     CREATE TABLE IF NOT EXISTS registros (
       id SERIAL PRIMARY KEY,
@@ -17,6 +18,7 @@ async function initDatabase() {
     )
   `);
 
+  console.log('INIT 2 - criando tabela relatorios_semanais');
   await db.query(`
     CREATE TABLE IF NOT EXISTS relatorios_semanais (
       id SERIAL PRIMARY KEY,
@@ -27,6 +29,8 @@ async function initDatabase() {
       criado_em TIMESTAMP NOT NULL
     )
   `);
+
+  console.log('INIT 3 - banco inicializado');
 }
 
 module.exports = initDatabase;
