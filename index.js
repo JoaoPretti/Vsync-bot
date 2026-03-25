@@ -367,6 +367,17 @@ function criarMenuRetirarBau() {
   };
 }
 
+async function startBot() {
+  try {
+    await testarConexaoBanco();
+    await initDatabase();
+    await client.login(process.env.DISCORD_TOKEN);
+  } catch (error) {
+    console.error('Erro ao iniciar o bot:', error);
+    process.exit(1);
+  }
+}
+
 function criarMenuAdicionarBau() {
   const embed = new EmbedBuilder()
     .setColor(0x2f3136)
@@ -731,6 +742,15 @@ client.on('interactionCreate', async interaction => {
 /* =========================
    INICIALIZAÇÃO
 ========================= */
+async function testarConexaoBanco() {
+  try {
+    const result = await db.query('SELECT NOW()');
+    console.log('✅ Banco conectado com sucesso:', result.rows[0]);
+  } catch (error) {
+    console.error('❌ Erro ao conectar no banco:', error);
+    throw error;
+  }
+}
 
 async function startBot() {
   try {
