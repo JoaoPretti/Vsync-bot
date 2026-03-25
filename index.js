@@ -1,7 +1,3 @@
-(async () => {
-  await initDatabase();
-})();
-
 require('dotenv').config();
 
 const cron = require('node-cron');
@@ -19,8 +15,6 @@ const {
 const db = require('./database/db');
 const initDatabase = require('./database/init');
 
-await initDatabase();
-
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
@@ -30,219 +24,153 @@ const client = new Client({
 ========================= */
 
 async function salvarRegistroBanco(dados) {
-  await db.query(`
-    INSERT INTO registros (
-      tipo, usuario_tag, usuario_id, item,
-      quantidade, imagem, acao, categoria,
-      status, criado_em
-    )
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-  `, [
-    dados.tipo,
-    dados.usuarioTag,
-    dados.usuarioId,
-    dados.item,
-    dados.quantidade,
-    dados.imagem,
-    dados.acao,
-    dados.categoria,
-    dados.status,
-    dados.criadoEm
-  ]);
+  await db.query(
+    `
+      INSERT INTO registros (
+        tipo,
+        usuario_tag,
+        usuario_id,
+        item,
+        quantidade,
+        imagem,
+        acao,
+        categoria,
+        status,
+        criado_em
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+    `,
+    [
+      dados.tipo,
+      dados.usuarioTag,
+      dados.usuarioId,
+      dados.item || null,
+      dados.quantidade ?? null,
+      dados.imagem || null,
+      dados.acao || null,
+      dados.categoria || null,
+      dados.status || 'pendente',
+      dados.criadoEm
+    ]
+  );
 }
 
 async function buscarRegistrosFarmPorUsuario(usuarioId) {
-  const result = await db.query(`
-    SELECT *
-    FROM registros
-    WHERE usuario_id = $1 AND tipo = 'farm'
-    ORDER BY id DESC
-  `, [usuarioId]);
+  const result = await db.query(
+    `
+      SELECT *
+      FROM registros
+      WHERE usuario_id = $1
+        AND tipo = 'farm'
+      ORDER BY id DESC
+    `,
+    [usuarioId]
+  );
 
   return result.rows;
 }
 
 async function buscarTotalFarmPorUsuario(usuarioId) {
-  const result = await db.query(`
-    SELECT COALESCE(SUM(quantidade), 0) AS total
-    FROM registros
-    WHERE usuario_id = $1 AND tipo = 'farm'
-  `, [usuarioId]);
+  const result = await db.query(
+    `
+      SELECT COALESCE(SUM(quantidade), 0) AS total
+      FROM registros
+      WHERE usuario_id = $1
+        AND tipo = 'farm'
+    `,
+    [usuarioId]
+  );
 
-  return result.rows[0].total;
+  return Number(result.rows[0]?.total || 0);
 }
 
-function buscarUsuariosComFarm() {
-  const stmt = db.prepare(`
+async function buscarUsuariosComFarm() {
+  const result = await db.query(`
     SELECT DISTINCT usuario_id, usuario_tag
     FROM registros
     WHERE tipo = 'farm'
   `);
 
-  return stmt.all();
+  return result.rows;
 }
 
-function resetarFarmUsuario(usuarioId) {
-  const stmt = db.prepare(`
-    DELETE FROM registros
-    WHERE usuario_id = ?
-      AND tipo = 'farm'
-  `);
-
-  stmt.run(usuarioId);
+async function resetarFarmUsuario(usuarioId) {
+  await db.query(
+    `
+      DELETE FROM registros
+      WHERE usuario_id = $1
+        AND tipo = 'farm'
+    `,
+    [usuarioId]
+  );
 }
 
-async function salvarRelatorioSemanal(usuarioId, usuarioTag, semana, total) {
-  await db.query(`
-    INSERT INTO relatorios_semanais (
-      usuario_id, usuario_tag, semana_referencia, total_itens, criado_em
-    )
-    VALUES ($1,$2,$3,$4,$5)
-  `, [
-    usuarioId,
-    usuarioTag,
-    semana,
-    total,
-    new Date()
-  ]);
+async function salvarRelatorioSemanal(usuarioId, usuarioTag, semanaReferencia, totalItens) {
+  await db.query(
+    `
+      INSERT INTO relatorios_semanais (
+        usuario_id,
+        usuario_tag,
+        semana_referencia,
+        total_itens,
+        criado_em
+      ) VALUES ($1,$2,$3,$4,$5)
+    `,
+    [
+      usuarioId,
+      usuarioTag,
+      semanaReferencia,
+      totalItens,
+      new Date()
+    ]
+  );
 }
 
 async function buscarRelatoriosUsuario(usuarioId) {
-  const result = await db.query(`
-    SELECT *
-    FROM relatorios_semanais
-    WHERE usuario_id = $1
-    ORDER BY criado_em DESC
-    LIMIT 52
-  `, [usuarioId]);
+  const result = await db.query(
+    `
+      SELECT *
+      FROM relatorios_semanais
+      WHERE usuario_id = $1
+      ORDER BY criado_em DESC
+      LIMIT 52
+    `,
+    [usuarioId]
+  );
 
   return result.rows;
 }
 
-function manterUltimos52RelatoriosPorUsuario(usuarioId) {
-  const stmt = db.prepare(`
-    DELETE FROM relatorios_semanais
-    WHERE usuario_id = ?
-      AND id NOT IN (
-        SELECT id
-        FROM relatorios_semanais
-        WHERE usuario_id = ?
-        ORDER BY criado_em DESC
-        LIMIT 52
-      )
-  `);
-
-  stmt.run(usuarioId, usuarioId);
+async function manterUltimos52RelatoriosPorUsuario(usuarioId) {
+  await db.query(
+    `
+      DELETE FROM relatorios_semanais
+      WHERE usuario_id = $1
+        AND id NOT IN (
+          SELECT id
+          FROM relatorios_semanais
+          WHERE usuario_id = $2
+          ORDER BY criado_em DESC
+          LIMIT 52
+        )
+    `,
+    [usuarioId, usuarioId]
+  );
 }
 
-function buscarResumoSemanalGlobal() {
-  const stmt = db.prepare(`
-    SELECT usuario_tag, SUM(quantidade) AS total
+async function buscarResumoSemanalGlobal() {
+  const result = await db.query(`
+    SELECT usuario_tag, usuario_id, SUM(quantidade) AS total
     FROM registros
     WHERE tipo = 'farm'
-    GROUP BY usuario_id
+    GROUP BY usuario_tag, usuario_id
     ORDER BY total DESC
   `);
 
-  return stmt.all();
-}
-
-function criarMenuRetirarBau() {
-  const embed = new EmbedBuilder()
-    .setColor(0x2f3136)
-    .setTitle('➖ Retirar do Baú')
-    .setDescription('Selecione a categoria que deseja retirar.')
-    .setTimestamp();
-
-  const row = new ActionRowBuilder().addComponents(
-    new StringSelectMenuBuilder()
-      .setCustomId('select_retirar_bau')
-      .setPlaceholder('Escolha uma categoria')
-      .addOptions(
-        {
-          label: 'Armamento e Munições',
-          value: 'retirar_armamento',
-          description: 'Registrar retirada de armamento'
-        },
-        {
-          label: 'Itens de Roubo',
-          value: 'retirar_roubo',
-          description: 'Registrar retirada de itens de roubo'
-        },
-        {
-          label: 'Drogas',
-          value: 'retirar_drogas',
-          description: 'Registrar retirada de drogas'
-        },
-        {
-          label: 'Itens Pessoais',
-          value: 'retirar_pessoais',
-          description: 'Registrar retirada de itens pessoais'
-        }
-      )
-  );
-
-  const row2 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId('abrir_bau')
-      .setLabel('Voltar ao Baú')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('⬅️')
-  );
-
-  return {
-    embed,
-    components: [row, row2]
-  };
-}
-
-function criarMenuAdicionarBau() {
-  const embed = new EmbedBuilder()
-    .setColor(0x2f3136)
-    .setTitle('➕ Adicionar ao Baú')
-    .setDescription('Selecione a categoria que deseja adicionar.')
-    .setTimestamp();
-
-  const row = new ActionRowBuilder().addComponents(
-    new StringSelectMenuBuilder()
-      .setCustomId('select_adicionar_bau')
-      .setPlaceholder('Escolha uma categoria')
-      .addOptions(
-        {
-          label: 'Armamento e Munições',
-          value: 'adicionar_armamento',
-          description: 'Registrar entrada de armamento'
-        },
-        {
-          label: 'Itens de Roubo',
-          value: 'adicionar_roubo',
-          description: 'Registrar entrada de itens de roubo'
-        },
-        {
-          label: 'Drogas',
-          value: 'adicionar_drogas',
-          description: 'Registrar entrada de drogas'
-        },
-        {
-          label: 'Itens Pessoais',
-          value: 'adicionar_pessoais',
-          description: 'Registrar entrada de itens pessoais'
-        }
-      )
-  );
-
-  const row2 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId('abrir_bau')
-      .setLabel('Voltar ao Baú')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('⬅️')
-  );
-
-  return {
-    embed,
-    components: [row, row2]
-  };
+  return result.rows.map(row => ({
+    usuario_tag: row.usuario_tag,
+    usuario_id: row.usuario_id,
+    total: Number(row.total || 0)
+  }));
 }
 
 /* =========================
@@ -257,26 +185,26 @@ function gerarSemanaReferencia() {
   return `${ano}-${mes}-${dia}`;
 }
 
-function processarRelatorioSemanal() {
-  const usuarios = buscarUsuariosComFarm();
+async function processarRelatorioSemanal() {
+  const usuarios = await buscarUsuariosComFarm();
   const semana = gerarSemanaReferencia();
 
   for (const usuario of usuarios) {
-    const total = buscarTotalFarmPorUsuario(usuario.usuario_id);
+    const total = await buscarTotalFarmPorUsuario(usuario.usuario_id);
 
     if (!total || total <= 0) {
       continue;
     }
 
-    salvarRelatorioSemanal(
+    await salvarRelatorioSemanal(
       usuario.usuario_id,
       usuario.usuario_tag,
       semana,
       total
     );
 
-    manterUltimos52RelatoriosPorUsuario(usuario.usuario_id);
-    resetarFarmUsuario(usuario.usuario_id);
+    await manterUltimos52RelatoriosPorUsuario(usuario.usuario_id);
+    await resetarFarmUsuario(usuario.usuario_id);
   }
 
   console.log(`✅ Relatório semanal processado em ${new Date().toISOString()}`);
@@ -303,7 +231,7 @@ function criarPainel() {
       '**📦 Registro de Baú**',
       'Abra o painel do baú para registrar retirada e entrada.'
     ].join('\n'))
-    .setThumbnail('https://i.postimg.cc/jqvvgNnM/screenshot-288.png')
+    .setThumbnail('https://i.imgur.com/0TeacfY.png')
     .setFooter({ text: 'VSYNC • Painel Central' })
     .setTimestamp();
 
@@ -352,10 +280,6 @@ function criarPainel() {
   };
 }
 
-/* =========================
-   PAINEL BAÚ
-========================= */
-
 function criarPainelBau() {
   const embed = new EmbedBuilder()
     .setColor(0x2f3136)
@@ -399,6 +323,104 @@ function criarPainelBau() {
   };
 }
 
+function criarMenuRetirarBau() {
+  const embed = new EmbedBuilder()
+    .setColor(0x2f3136)
+    .setTitle('➖ Retirar do Baú')
+    .setDescription('Selecione a categoria que deseja retirar.')
+    .setTimestamp();
+
+  const row1 = new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId('select_retirar_bau')
+      .setPlaceholder('Escolha uma categoria')
+      .addOptions(
+        {
+          label: 'Armamento e Munições',
+          value: 'retirar_armamento',
+          description: 'Registrar retirada de armamento'
+        },
+        {
+          label: 'Itens de Roubo',
+          value: 'retirar_roubo',
+          description: 'Registrar retirada de itens de roubo'
+        },
+        {
+          label: 'Drogas',
+          value: 'retirar_drogas',
+          description: 'Registrar retirada de drogas'
+        },
+        {
+          label: 'Itens Pessoais',
+          value: 'retirar_pessoais',
+          description: 'Registrar retirada de itens pessoais'
+        }
+      )
+  );
+
+  const row2 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('abrir_bau')
+      .setLabel('Voltar ao Baú')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('⬅️')
+  );
+
+  return {
+    embed,
+    components: [row1, row2]
+  };
+}
+
+function criarMenuAdicionarBau() {
+  const embed = new EmbedBuilder()
+    .setColor(0x2f3136)
+    .setTitle('➕ Adicionar ao Baú')
+    .setDescription('Selecione a categoria que deseja adicionar.')
+    .setTimestamp();
+
+  const row1 = new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId('select_adicionar_bau')
+      .setPlaceholder('Escolha uma categoria')
+      .addOptions(
+        {
+          label: 'Armamento e Munições',
+          value: 'adicionar_armamento',
+          description: 'Registrar entrada de armamento'
+        },
+        {
+          label: 'Itens de Roubo',
+          value: 'adicionar_roubo',
+          description: 'Registrar entrada de itens de roubo'
+        },
+        {
+          label: 'Drogas',
+          value: 'adicionar_drogas',
+          description: 'Registrar entrada de drogas'
+        },
+        {
+          label: 'Itens Pessoais',
+          value: 'adicionar_pessoais',
+          description: 'Registrar entrada de itens pessoais'
+        }
+      )
+  );
+
+  const row2 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('abrir_bau')
+      .setLabel('Voltar ao Baú')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('⬅️')
+  );
+
+  return {
+    embed,
+    components: [row1, row2]
+  };
+}
+
 /* =========================
    BOT READY
 ========================= */
@@ -408,8 +430,12 @@ client.once('ready', () => {
 
   cron.schedule(
     '0 0 * * 1',
-    () => {
-      processarRelatorioSemanal();
+    async () => {
+      try {
+        await processarRelatorioSemanal();
+      } catch (error) {
+        console.error('Erro ao processar cron semanal:', error);
+      }
     },
     {
       timezone: 'America/Sao_Paulo'
@@ -423,9 +449,6 @@ client.once('ready', () => {
 
 client.on('interactionCreate', async interaction => {
   try {
-    /* =========================
-       COMANDOS SLASH
-    ========================= */
     if (interaction.isChatInputCommand()) {
       if (interaction.commandName === 'painel') {
         const painel = criarPainel();
@@ -479,7 +502,7 @@ client.on('interactionCreate', async interaction => {
 
         await canal.send({ embeds: [embed] });
 
-        salvarRegistroBanco({
+        await salvarRegistroBanco({
           tipo: 'farm',
           usuarioTag: interaction.user.tag,
           usuarioId: interaction.user.id,
@@ -488,7 +511,7 @@ client.on('interactionCreate', async interaction => {
           imagem,
           categoria: 'farm',
           status: 'registrado',
-          criadoEm: new Date().toISOString()
+          criadoEm: new Date()
         });
 
         return interaction.reply({
@@ -498,7 +521,7 @@ client.on('interactionCreate', async interaction => {
       }
 
       if (interaction.commandName === 'relatorio_semanal') {
-        const relatorios = buscarRelatoriosUsuario(interaction.user.id);
+        const relatorios = await buscarRelatoriosUsuario(interaction.user.id);
 
         if (!relatorios.length) {
           return interaction.reply({
@@ -528,7 +551,7 @@ client.on('interactionCreate', async interaction => {
       }
 
       if (interaction.commandName === 'relatorio_global') {
-        const dados = buscarResumoSemanalGlobal();
+        const dados = await buscarResumoSemanalGlobal();
 
         if (!dados.length) {
           return interaction.reply({
@@ -538,7 +561,7 @@ client.on('interactionCreate', async interaction => {
         }
 
         const descricao = dados
-          .map(user => `👤 ${user.usuario_tag}: **${user.total}**`)
+          .map(user => `👤 <@${user.usuario_id}>: **${user.total}**`)
           .join('\n');
 
         const totalGeral = dados.reduce((acc, user) => acc + user.total, 0);
@@ -560,7 +583,7 @@ client.on('interactionCreate', async interaction => {
       }
 
       if (interaction.commandName === 'testar_relatorio') {
-        processarRelatorioSemanal();
+        await processarRelatorioSemanal();
 
         return interaction.reply({
           content: '✅ Relatório semanal executado manualmente para teste.',
@@ -569,12 +592,9 @@ client.on('interactionCreate', async interaction => {
       }
     }
 
-    /* =========================
-       BOTÕES
-    ========================= */
     if (interaction.isButton()) {
       if (interaction.customId === 'farm' || interaction.customId === 'painel_farm') {
-        const registros = buscarRegistrosFarmPorUsuario(interaction.user.id);
+        const registros = await buscarRegistrosFarmPorUsuario(interaction.user.id);
 
         if (!registros.length) {
           return interaction.reply({
@@ -587,7 +607,7 @@ client.on('interactionCreate', async interaction => {
 
         for (const registro of registros) {
           const item = registro.item || 'Sem item';
-          const quantidade = registro.quantidade || 0;
+          const quantidade = Number(registro.quantidade || 0);
 
           if (!agrupado[item]) {
             agrupado[item] = 0;
@@ -601,7 +621,7 @@ client.on('interactionCreate', async interaction => {
           .join('\n');
 
         const totalQuantidade = Object.values(agrupado)
-          .reduce((acc, val) => acc + val, 0);
+          .reduce((acc, val) => acc + Number(val), 0);
 
         const embed = new EmbedBuilder()
           .setTitle('📊 Seu Farm')
@@ -665,11 +685,20 @@ client.on('interactionCreate', async interaction => {
           ephemeral: true
         });
       }
+
+      if (
+        interaction.customId === 'lavagem_parceria' ||
+        interaction.customId === 'lavagem_pista' ||
+        interaction.customId === 'lavagem_taxa' ||
+        interaction.customId === 'ver_todos_itens'
+      ) {
+        return interaction.reply({
+          content: 'Essa função ainda será implementada.',
+          ephemeral: true
+        });
+      }
     }
 
-    /* =========================
-       SELECT MENU
-    ========================= */
     if (interaction.isStringSelectMenu()) {
       const acao = interaction.values[0];
 
@@ -677,14 +706,14 @@ client.on('interactionCreate', async interaction => {
         interaction.customId === 'select_retirar_bau' ||
         interaction.customId === 'select_adicionar_bau'
       ) {
-        salvarRegistroBanco({
+        await salvarRegistroBanco({
           tipo: 'acao_bau',
           usuarioTag: interaction.user.tag,
           usuarioId: interaction.user.id,
           acao,
           categoria: 'bau',
           status: 'pendente',
-          criadoEm: new Date().toISOString()
+          criadoEm: new Date()
         });
 
         return interaction.reply({
@@ -705,4 +734,18 @@ client.on('interactionCreate', async interaction => {
   }
 });
 
-client.login(process.env.DISCORD_TOKEN);
+/* =========================
+   INICIALIZAÇÃO
+========================= */
+
+async function startBot() {
+  try {
+    await initDatabase();
+    await client.login(process.env.DISCORD_TOKEN);
+  } catch (error) {
+    console.error('Erro ao iniciar o bot:', error);
+    process.exit(1);
+  }
+}
+
+startBot();
