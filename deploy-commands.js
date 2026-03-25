@@ -37,7 +37,11 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName('testar_relatorio')
-    .setDescription('Executa manualmente o relatório semanal para teste')
+    .setDescription('Executa manualmente o relatório semanal para teste'),
+
+  new SlashCommandBuilder()
+  .setName('relatorio_global')
+  .setDescription('Mostra o relatório geral da semana')
 ].map(cmd => cmd.toJSON());
 
 

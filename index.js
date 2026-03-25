@@ -146,6 +146,18 @@ function manterUltimos52RelatoriosPorUsuario(usuarioId) {
   stmt.run(usuarioId, usuarioId);
 }
 
+function buscarResumoSemanalGlobal() {
+  const stmt = db.prepare(`
+    SELECT usuario_tag, SUM(quantidade) AS total
+    FROM registros
+    WHERE tipo = 'farm'
+    GROUP BY usuario_id
+    ORDER BY total DESC
+  `);
+
+  return stmt.all();
+}
+
 /* =========================
    FUNÇÕES DE RELATÓRIO
 ========================= */
@@ -361,6 +373,37 @@ client.on('interactionCreate', async interaction => {
           ephemeral: true
         });
       }
+
+      if (interaction.commandName === 'relatorio_global') {
+  const dados = buscarResumoSemanalGlobal();
+
+  if (!dados.length) {
+    return interaction.reply({
+      content: 'Nenhum farm registrado ainda.',
+      ephemeral: true
+    });
+  }
+
+  const descricao = dados
+    .map(user => `👤 ${user.usuario_tag}: **${user.total}**`)
+    .join('\n');
+
+  const totalGeral = dados.reduce((acc, user) => acc + user.total, 0);
+
+  const embed = new EmbedBuilder()
+    .setTitle('📊 Relatório Global da Semana')
+    .setDescription(descricao)
+    .addFields({
+      name: 'Total Geral',
+      value: String(totalGeral),
+      inline: false
+    })
+    .setTimestamp();
+
+  return interaction.reply({
+    embeds: [embed]
+  });
+}
 
       if (interaction.commandName === 'testar_relatorio') {
   processarRelatorioSemanal();
