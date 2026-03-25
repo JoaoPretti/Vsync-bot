@@ -158,6 +158,104 @@ function buscarResumoSemanalGlobal() {
   return stmt.all();
 }
 
+function criarMenuRetirarBau() {
+  const embed = new EmbedBuilder()
+    .setColor(0x2f3136)
+    .setTitle('➖ Retirar do Baú')
+    .setDescription('Selecione a categoria que deseja retirar.')
+    .setTimestamp();
+
+  const row = new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId('select_retirar_bau')
+      .setPlaceholder('Escolha uma categoria')
+      .addOptions(
+        {
+          label: 'Armamento e Munições',
+          value: 'retirar_armamento',
+          description: 'Registrar retirada de armamento'
+        },
+        {
+          label: 'Itens de Roubo',
+          value: 'retirar_roubo',
+          description: 'Registrar retirada de itens de roubo'
+        },
+        {
+          label: 'Drogas',
+          value: 'retirar_drogas',
+          description: 'Registrar retirada de drogas'
+        },
+        {
+          label: 'Itens Pessoais',
+          value: 'retirar_pessoais',
+          description: 'Registrar retirada de itens pessoais'
+        }
+      )
+  );
+
+  const row2 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('abrir_bau')
+      .setLabel('Voltar ao Baú')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('⬅️')
+  );
+
+  return {
+    embed,
+    components: [row, row2]
+  };
+}
+
+function criarMenuAdicionarBau() {
+  const embed = new EmbedBuilder()
+    .setColor(0x2f3136)
+    .setTitle('➕ Adicionar ao Baú')
+    .setDescription('Selecione a categoria que deseja adicionar.')
+    .setTimestamp();
+
+  const row = new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId('select_adicionar_bau')
+      .setPlaceholder('Escolha uma categoria')
+      .addOptions(
+        {
+          label: 'Armamento e Munições',
+          value: 'adicionar_armamento',
+          description: 'Registrar entrada de armamento'
+        },
+        {
+          label: 'Itens de Roubo',
+          value: 'adicionar_roubo',
+          description: 'Registrar entrada de itens de roubo'
+        },
+        {
+          label: 'Drogas',
+          value: 'adicionar_drogas',
+          description: 'Registrar entrada de drogas'
+        },
+        {
+          label: 'Itens Pessoais',
+          value: 'adicionar_pessoais',
+          description: 'Registrar entrada de itens pessoais'
+        }
+      )
+  );
+
+  const row2 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('abrir_bau')
+      .setLabel('Voltar ao Baú')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('⬅️')
+  );
+
+  return {
+    embed,
+    components: [row, row2]
+  };
+}
+
 /* =========================
    FUNÇÕES DE RELATÓRIO
 ========================= */
@@ -203,41 +301,107 @@ function criarPainel() {
   const embed = new EmbedBuilder()
     .setColor(0x2f3136)
     .setTitle('🪪 Painel para Membros')
-    .setDescription('Selecione abaixo as opções')
-    .addFields(
-      { name: '🎯 Meta de Farm', value: 'Verifique seu farm semanal' },
-      { name: '💰 Registro', value: 'Registrar lavagens' },
-      { name: '📦 Registro de Baú', value: 'Controle de itens do baú' }
-    )
+    .setDescription([
+      'Selecione abaixo as opções disponíveis.',
+      '',
+      '━━━━━━━━━━━━━━━━━━',
+      '**🎯 Meta de Farm**',
+      'Verifique como está o andamento do seu farm semanal.',
+      '',
+      '**💰 Registro**',
+      'Notifique suas lavagens e peça para a gerência aprovar sua lavagem.',
+      '',
+      '**📦 Registro de Baú**',
+      'Abra o painel do baú para registrar retirada e entrada.'
+    ].join('\n'))
+    .setThumbnail('https://i.imgur.com/0TeacfY.png')
+    .setFooter({ text: 'VSYNC • Painel Central' })
     .setTimestamp();
 
   const row1 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('farm')
-      .setLabel('Ver Farm')
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId('lavagem')
-      .setLabel('Lavagem')
-      .setStyle(ButtonStyle.Primary)
+      .setLabel('Verifique seu Farm')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('📑')
   );
 
   const row2 = new ActionRowBuilder().addComponents(
-    new StringSelectMenuBuilder()
-      .setCustomId('acoes_bau')
-      .setPlaceholder('Ações do baú')
-      .addOptions(
-        {
-          label: 'Retirar',
-          value: 'retirar',
-          description: 'Registrar retirada do baú'
-        },
-        {
-          label: 'Adicionar',
-          value: 'adicionar',
-          description: 'Registrar adição ao baú'
-        }
-      )
+    new ButtonBuilder()
+      .setCustomId('lavagem_parceria')
+      .setLabel('Lavagem Parceria')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('💲'),
+    new ButtonBuilder()
+      .setCustomId('lavagem_pista')
+      .setLabel('Lavagem Pista')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('💲'),
+    new ButtonBuilder()
+      .setCustomId('lavagem_taxa')
+      .setLabel('Lavagem Taxa')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('💲')
+  );
+
+  const row3 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('ver_todos_itens')
+      .setLabel('Ver todos itens')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('🔄'),
+    new ButtonBuilder()
+      .setCustomId('abrir_bau')
+      .setLabel('Abrir Painel do Baú')
+      .setStyle(ButtonStyle.Success)
+      .setEmoji('📦')
+  );
+
+  return {
+    embed,
+    components: [row1, row2, row3]
+  };
+}
+
+/* =========================
+   PAINEL BAÚ
+========================= */
+
+function criarPainelBau() {
+  const embed = new EmbedBuilder()
+    .setColor(0x2f3136)
+    .setTitle('📦 Painel do Baú')
+    .setDescription([
+      'Selecione a ação desejada abaixo.',
+      '',
+      '━━━━━━━━━━━━━━━━━━',
+      '🔫 **Armamento e Munições**',
+      '🧰 **Itens de Roubo**',
+      '🌿 **Drogas**',
+      '🎒 **Itens Pessoais**'
+    ].join('\n'))
+    .setFooter({ text: 'VSYNC • Painel do Baú' })
+    .setTimestamp();
+
+  const row1 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('menu_retirar_bau')
+      .setLabel('Retirar')
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji('➖'),
+    new ButtonBuilder()
+      .setCustomId('menu_adicionar_bau')
+      .setLabel('Adicionar')
+      .setStyle(ButtonStyle.Success)
+      .setEmoji('➕')
+  );
+
+  const row2 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('voltar_painel')
+      .setLabel('Voltar')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('⬅️')
   );
 
   return {
@@ -375,44 +539,45 @@ client.on('interactionCreate', async interaction => {
       }
 
       if (interaction.commandName === 'relatorio_global') {
-  const dados = buscarResumoSemanalGlobal();
+        const dados = buscarResumoSemanalGlobal();
 
-  if (!dados.length) {
-    return interaction.reply({
-      content: 'Nenhum farm registrado ainda.',
-      ephemeral: true
-    });
-  }
+        if (!dados.length) {
+          return interaction.reply({
+            content: 'Nenhum farm registrado ainda.',
+            ephemeral: true
+          });
+        }
 
-  const descricao = dados
-    .map(user => `👤 ${user.usuario_tag}: **${user.total}**`)
-    .join('\n');
+        const descricao = dados
+          .map(user => `👤 ${user.usuario_tag}: **${user.total}**`)
+          .join('\n');
 
-  const totalGeral = dados.reduce((acc, user) => acc + user.total, 0);
+        const totalGeral = dados.reduce((acc, user) => acc + user.total, 0);
 
-  const embed = new EmbedBuilder()
-    .setTitle('📊 Relatório Global da Semana')
-    .setDescription(descricao)
-    .addFields({
-      name: 'Total Geral',
-      value: String(totalGeral),
-      inline: false
-    })
-    .setTimestamp();
+        const embed = new EmbedBuilder()
+          .setTitle('📊 Relatório Global da Semana')
+          .setDescription(descricao)
+          .addFields({
+            name: 'Total Geral',
+            value: String(totalGeral),
+            inline: false
+          })
+          .setTimestamp();
 
-  return interaction.reply({
-    embeds: [embed]
-  });
-}
+        return interaction.reply({
+          embeds: [embed],
+          ephemeral: true
+        });
+      }
 
       if (interaction.commandName === 'testar_relatorio') {
-  processarRelatorioSemanal();
+        processarRelatorioSemanal();
 
-  return interaction.reply({
-    content: '✅ Relatório semanal executado manualmente para teste.',
-    ephemeral: true
-  });
-}
+        return interaction.reply({
+          content: '✅ Relatório semanal executado manualmente para teste.',
+          ephemeral: true
+        });
+      }
     }
 
     /* =========================
@@ -471,6 +636,46 @@ client.on('interactionCreate', async interaction => {
           ephemeral: true
         });
       }
+
+      if (interaction.customId === 'abrir_bau') {
+        const painelBau = criarPainelBau();
+
+        return interaction.reply({
+          embeds: [painelBau.embed],
+          components: painelBau.components,
+          ephemeral: true
+        });
+      }
+
+      if (interaction.customId === 'voltar_painel') {
+        const painel = criarPainel();
+
+        return interaction.reply({
+          embeds: [painel.embed],
+          components: painel.components,
+          ephemeral: true
+        });
+      }
+
+      if (interaction.customId === 'menu_retirar_bau') {
+        const menu = criarMenuRetirarBau();
+
+        return interaction.reply({
+          embeds: [menu.embed],
+          components: menu.components,
+          ephemeral: true
+        });
+      }
+
+      if (interaction.customId === 'menu_adicionar_bau') {
+        const menu = criarMenuAdicionarBau();
+
+        return interaction.reply({
+          embeds: [menu.embed],
+          components: menu.components,
+          ephemeral: true
+        });
+      }
     }
 
     /* =========================
@@ -479,20 +684,25 @@ client.on('interactionCreate', async interaction => {
     if (interaction.isStringSelectMenu()) {
       const acao = interaction.values[0];
 
-      salvarRegistroBanco({
-        tipo: 'acao_bau',
-        usuarioTag: interaction.user.tag,
-        usuarioId: interaction.user.id,
-        acao,
-        categoria: 'bau',
-        status: 'pendente',
-        criadoEm: new Date().toISOString()
-      });
+      if (
+        interaction.customId === 'select_retirar_bau' ||
+        interaction.customId === 'select_adicionar_bau'
+      ) {
+        salvarRegistroBanco({
+          tipo: 'acao_bau',
+          usuarioTag: interaction.user.tag,
+          usuarioId: interaction.user.id,
+          acao,
+          categoria: 'bau',
+          status: 'pendente',
+          criadoEm: new Date().toISOString()
+        });
 
-      return interaction.reply({
-        content: `✅ Ação registrada: ${acao}`,
-        ephemeral: true
-      });
+        return interaction.reply({
+          content: `✅ Ação registrada: ${acao}`,
+          ephemeral: true
+        });
+      }
     }
   } catch (error) {
     console.error('Erro na interação:', error);
