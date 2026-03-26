@@ -9,8 +9,7 @@ const {
   ButtonBuilder,
   ButtonStyle,
   StringSelectMenuBuilder,
-  ChannelType,
-  PermissionFlagsBits
+  ChannelType
 } = require('discord.js');
 
 const db = require('./database/db');
@@ -186,177 +185,6 @@ function gerarSemanaReferencia() {
   return `${ano}-${mes}-${dia}`;
 }
 
-function obterIdsConfigurados(valor) {
-  return (valor || '')
-    .split(',')
-    .map(item => item.trim())
-    .filter(Boolean);
-}
-
-function normalizarNomeCanal(valor) {
-  return (valor || 'membro')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80) || 'membro';
-}
-
-function buscarCanalRegistroMembro(guild, usuarioId) {
-  return guild.channels.cache.find(channel =>
-    channel.type === ChannelType.GuildText &&
-    channel.topic === `registro-membro:${usuarioId}`
-  ) || null;
-}
-
-async function criarCanalRegistroMembro(guild, member) {
-  const categoriaId = process.env.CATEGORIA_REGISTRO_ID;
-  const categoria = categoriaId
-    ? guild.channels.cache.get(categoriaId)
-    : null;
-
-  if (categoriaId && (!categoria || categoria.type !== ChannelType.GuildCategory)) {
-    throw new Error('A categoria de registro nao esta configurada corretamente.');
-  }
-
-  const cargosAcesso = obterIdsConfigurados(process.env.CARGOS_REGISTRO_ACESSO_IDS)
-    .map(roleId => guild.roles.cache.get(roleId))
-    .filter(Boolean);
-
-  const permissoesBasicas = [
-    PermissionFlagsBits.ViewChannel,
-    PermissionFlagsBits.SendMessages,
-    PermissionFlagsBits.ReadMessageHistory,
-    PermissionFlagsBits.UseApplicationCommands,
-    PermissionFlagsBits.AttachFiles,
-    PermissionFlagsBits.EmbedLinks
-  ];
-
-  const permissionOverwrites = [
-    {
-      id: guild.roles.everyone.id,
-      deny: [PermissionFlagsBits.ViewChannel]
-    },
-    {
-      id: member.id,
-      allow: permissoesBasicas
-    },
-    {
-      id: guild.members.me?.id || client.user.id,
-      allow: [
-        ...permissoesBasicas,
-        PermissionFlagsBits.ManageChannels,
-        PermissionFlagsBits.ManageMessages
-      ]
-    }
-  ];
-
-  for (const cargo of cargosAcesso) {
-    permissionOverwrites.push({
-      id: cargo.id,
-      allow: permissoesBasicas
-    });
-  }
-
-  const channelData = {
-    name: `registro-${normalizarNomeCanal(member.user.username)}`.slice(0, 100),
-    type: ChannelType.GuildText,
-    topic: `registro-membro:${member.id}`,
-    permissionOverwrites
-  };
-
-  if (categoria) {
-    channelData.parent = categoria.id;
-  }
-
-  return guild.channels.create(channelData);
-}
-
-async function registrarMembroDiscord(interaction) {
-  if (!interaction.inGuild() || !interaction.guild) {
-    return interaction.reply({
-      content: 'Esse registro so pode ser feito dentro do servidor.',
-      ephemeral: true
-    });
-  }
-
-  await interaction.deferReply({ ephemeral: true });
-
-  try {
-    const cargoMembroId = process.env.CARGO_MEMBRO_ID;
-
-    if (!cargoMembroId) {
-      throw new Error('O cargo de membro nao foi configurado no bot.');
-    }
-
-    const cargoMembro = interaction.guild.roles.cache.get(cargoMembroId);
-
-    if (!cargoMembro) {
-      throw new Error('O cargo de membro configurado nao foi encontrado neste servidor.');
-    }
-
-    const member = await interaction.guild.members.fetch(interaction.user.id);
-    const jaTinhaCargo = member.roles.cache.has(cargoMembroId);
-
-    let canalPrivado = buscarCanalRegistroMembro(interaction.guild, interaction.user.id);
-    const canalJaExistia = Boolean(canalPrivado);
-
-    if (!canalPrivado) {
-      canalPrivado = await criarCanalRegistroMembro(interaction.guild, member);
-
-      const cargosAcesso = obterIdsConfigurados(process.env.CARGOS_REGISTRO_ACESSO_IDS)
-        .map(roleId => interaction.guild.roles.cache.get(roleId))
-        .filter(Boolean);
-
-      const mencoesCargos = cargosAcesso
-        .map(cargo => `<@&${cargo.id}>`)
-        .join(' ');
-
-      const mensagemBoasVindas = [
-        `Canal privado criado para <@${interaction.user.id}>.`,
-        'Use este espaco para falar com a lideranca e organizar seu registro de farm.',
-        mencoesCargos ? `Cargos com acesso: ${mencoesCargos}` : null
-      ]
-        .filter(Boolean)
-        .join('\n');
-
-      await canalPrivado.send({ content: mensagemBoasVindas });
-    }
-
-    if (!jaTinhaCargo) {
-      await member.roles.add(cargoMembroId);
-    }
-
-    let mensagemStatus = 'Seu registro foi concluido com sucesso.';
-
-    if (canalJaExistia && jaTinhaCargo) {
-      mensagemStatus = 'Seu registro ja estava concluido.';
-    } else if (canalJaExistia || jaTinhaCargo) {
-      mensagemStatus = 'Seu registro foi atualizado com sucesso.';
-    }
-
-    return interaction.editReply({
-      content: [
-        mensagemStatus,
-        canalPrivado ? `Sala privada: ${canalPrivado}` : null,
-        jaTinhaCargo
-          ? 'A tag de membro ja estava aplicada no seu perfil.'
-          : 'A tag de membro foi aplicada automaticamente.'
-      ]
-        .filter(Boolean)
-        .join('\n')
-    });
-  } catch (error) {
-    console.error('Erro ao registrar membro no Discord:', error);
-
-    return interaction.editReply({
-      content: error?.message ||
-        'Nao consegui concluir o registro. Verifique as configuracoes e as permissoes do bot.'
-    });
-  }
-}
-
 async function processarRelatorioSemanal() {
   const usuarios = await buscarUsuariosComFarm();
   const semana = gerarSemanaReferencia();
@@ -444,34 +272,6 @@ function criarPainel() {
   return {
     embed,
     components: [row1, row2, row3]
-  };
-}
-
-function criarPainelRegistroMembro() {
-  const embed = new EmbedBuilder()
-    .setColor(0x2f3136)
-    .setTitle('Registro de Membro')
-    .setDescription([
-      'Clique no botao abaixo para se cadastrar no Discord.',
-      '',
-      'Ao se cadastrar, sera criada uma sala privada para voce e para os cargos configurados da lideranca.',
-      'Nessa sala voce podera falar diretamente com os lideres e usar o comando de registro de farm que ja esta pronto.',
-      '',
-      'Depois do cadastro, a tag de membro sera aplicada automaticamente no seu perfil.'
-    ].join('\n'))
-    .setFooter({ text: 'VSYNC | Registro de Membro' })
-    .setTimestamp();
-
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId('registrar_membro_discord')
-      .setLabel('Registrar Membro')
-      .setStyle(ButtonStyle.Success)
-  );
-
-  return {
-    embed,
-    components: [row]
   };
 }
 
@@ -671,15 +471,6 @@ client.on('interactionCreate', async interaction => {
         });
       }
 
-      if (interaction.commandName === 'painel_registro') {
-        const painelRegistro = criarPainelRegistroMembro();
-
-        return interaction.reply({
-          embeds: [painelRegistro.embed],
-          components: painelRegistro.components
-        });
-      }
-
       if (interaction.commandName === 'registrar_farm') {
         const item = interaction.options.getString('item', true);
         const quantidade = interaction.options.getInteger('quantidade', true);
@@ -814,10 +605,6 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (interaction.isButton()) {
-      if (interaction.customId === 'registrar_membro_discord') {
-        return registrarMembroDiscord(interaction);
-      }
-
       if (interaction.customId === 'farm' || interaction.customId === 'painel_farm') {
         const registros = await buscarRegistrosFarmPorUsuario(interaction.user.id);
 
