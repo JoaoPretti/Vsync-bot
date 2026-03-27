@@ -451,7 +451,7 @@ async function processarCadastro(interaction) {
   const canal = await criarOuAtualizarCanalCadastro(guild, membro, nomeFormatado, personagemId);
 
   await membro.setNickname(apelido).catch(error => {
-    console.error(`Não foi possível alterar o apelido de ${membro.user.tag}:`, error);
+    console.error(`Não foi possível alterar o apelido de ${interaction.user.tag}:`, error);
   });
 
   await salvarOuAtualizarCadastro({
