@@ -28,6 +28,7 @@ const CADASTRO_BANNER_URL = 'attachment://solicite_cadastro.png';
 const CADASTRO_MODAL_ID = 'modal_cadastro';
 const CADASTRO_BUTTON_ID = 'abrir_cadastro';
 const CADASTRO_IMAGE_PATH = 'C:\\Users\\Pc\\Desktop\\Projeto Vsync\\solicite_cadastro.png';
+const PAINEL_PRINCIPAL_CANAL_ID = process.env.PAINEL_PRINCIPAL_CANAL_ID || '1487117541838163978';
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
@@ -596,6 +597,39 @@ function criarPainel() {
   };
 }
 
+async function publicarOuAtualizarPainelPrincipal() {
+  if (!PAINEL_PRINCIPAL_CANAL_ID) {
+    return;
+  }
+
+  const painel = criarPainel();
+  const canal = await client.channels.fetch(PAINEL_PRINCIPAL_CANAL_ID).catch(() => null);
+
+  if (!canal || canal.type !== ChannelType.GuildText) {
+    console.error('Canal do painel principal nÃ£o encontrado ou invÃ¡lido.');
+    return;
+  }
+
+  const mensagens = await canal.messages.fetch({ limit: 20 });
+  const mensagemExistente = mensagens.find(message =>
+    message.author.id === client.user.id &&
+    message.embeds.some(embed => embed.title === painel.embed.data.title)
+  );
+
+  if (mensagemExistente) {
+    await mensagemExistente.edit({
+      embeds: [painel.embed],
+      components: painel.components
+    });
+    return;
+  }
+
+  await canal.send({
+    embeds: [painel.embed],
+    components: painel.components
+  });
+}
+
 function criarPainelBau() {
   const embed = new EmbedBuilder()
     .setColor(0x2f3136)
@@ -774,6 +808,10 @@ client.once('ready', () => {
       timezone: 'America/Sao_Paulo'
     }
   );
+
+  publicarOuAtualizarPainelPrincipal().catch(error => {
+    console.error('Erro ao publicar o painel principal persistente:', error);
+  });
 });
 
 /* =========================
