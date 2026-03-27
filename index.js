@@ -386,7 +386,12 @@ function gerarNomeCanalCadastro(nomeFormatado, personagemId) {
 }
 
 function formatarMoeda(valor) {
-  return new Intl.NumberFormat('pt-BR').format(Number(valor || 0));
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(Number(valor || 0));
 }
 
 function obterConfigLavagem(tipo) {
