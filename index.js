@@ -342,19 +342,24 @@ async function aprovarLavagem(lavagemId, aprovador) {
 async function recusarLavagem(lavagemId, recusador) {
   const result = await db.query(
     `
-      UPDATE lavagens
-      SET status = 'recusada',
-          recusado_por_id = $1,
-          recusado_por_tag = $2,
-          atualizado_em = $3
-      WHERE id = $4
+      DELETE FROM lavagens
+      WHERE id = $1
         AND status = 'pendente'
       RETURNING *
     `,
-    [recusador.id, recusador.tag, new Date(), lavagemId]
+    [lavagemId]
   );
 
-  return result.rows[0] || null;
+  if (!result.rows[0]) {
+    return null;
+  }
+
+  return {
+    ...result.rows[0],
+    recusado_por_id: recusador.id,
+    recusado_por_tag: recusador.tag,
+    status: 'recusada'
+  };
 }
 
 function normalizarEspacos(texto) {
