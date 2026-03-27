@@ -51,19 +51,58 @@ const CANAL_LOG_ACOES_ID = process.env.CANAL_LOG_ACOES_ID || '148717626043740986
 // Edite esta estrutura para cadastrar as ações disponíveis em cada categoria.
 const ACOES_DISPONIVEIS = {
   pequena: [
-    'Galinheiro - N° 68',
-    'Loja de Conveniência',
-    'Mercadinho'
+    'Aeroporto Trevor',
+    'Ammunation Porto',
+    'Ammunation Praça',
+    'Antena',
+    'Auditório',
+    'Bebidas Samir',
+    'Campo de Golf',
+    'Comedy',
+    'Estábulo',
+    'Fast Food',
+    'Hiper Mercado',
+    'Igreja',
+    'Lanchonete - Spitroasters',
+    'Lava Jato',
+    'Lojinha Banco Central',
+    'Lojinha China',
+    'Lojinha Grapeseed',
+    'Lojinha Groove',
+    'Lojinha Praia',
+    'Lojinha Prefeitura',
+    'Lojinha Barragem',
+    'Lojinha Sandy',
+    'McDonald\'s',
+    'Navio Porto',
+    'Píer',
+    'Planet'
   ],
   media: [
+    'Açougue',
+    'Anfiteatro',
+    'BobCat',
+    'Container',
+    'Estacionamento Marrom',
+    'Fleeca Chaves',
+    'Fleeca Life Invader',
+    'Fleeca Praia',
+    'Fleeca Rota 68',
+    'Fleeca Shopping',
+    'Galinheiro',
+    'Hotel Rosa',
     'Joalheria',
-    'Banco Fleeca',
-    'Caminhão'
+    'Mergulhador',
+    'Mazebank',
+    'Pelados',
+    'Prefeitura'
   ],
   grande: [
     'Banco Central',
-    'Cassino',
-    'Yacht'
+    'Banco Paleto',
+    'Madeireira',
+    'Nióbio',
+    'Porto'
   ]
 };
 
