@@ -382,6 +382,24 @@ async function removerDadosUsuarioDoBanco(usuarioId) {
   }
 }
 
+async function apagarCanalPrivadoCadastro(canalId) {
+  if (!canalId) {
+    return false;
+  }
+
+  const canal = await client.channels.fetch(canalId).catch(() => null);
+
+  if (!canal) {
+    return false;
+  }
+
+  await canal.delete('Usuário saiu do servidor').catch(error => {
+    throw error;
+  });
+
+  return true;
+}
+
 async function recusarLavagem(lavagemId, recusador) {
   const result = await db.query(
     `
@@ -1171,10 +1189,42 @@ client.once('ready', () => {
 
 client.on('guildMemberRemove', async member => {
   try {
+    console.log(`[guildMemberRemove] Saída detectada: ${member.user.tag} (${member.id})`);
+
+    const cadastroUsuario = await buscarCadastroPorUsuario(member.id);
+
+    if (cadastroUsuario) {
+      console.log(
+        `[guildMemberRemove] Cadastro encontrado para ${member.user.tag} (${member.id}). Canal privado: ${cadastroUsuario.canal_id || 'nenhum'}`
+      );
+
+      if (cadastroUsuario.canal_id) {
+        const canalApagado = await apagarCanalPrivadoCadastro(cadastroUsuario.canal_id).catch(error => {
+          console.error(
+            `[guildMemberRemove] Falha ao apagar o canal privado ${cadastroUsuario.canal_id} de ${member.user.tag} (${member.id}):`,
+            error
+          );
+          return false;
+        });
+
+        if (canalApagado) {
+          console.log(
+            `[guildMemberRemove] Canal privado ${cadastroUsuario.canal_id} apagado para ${member.user.tag} (${member.id}).`
+          );
+        } else {
+          console.log(
+            `[guildMemberRemove] Canal privado ${cadastroUsuario.canal_id} não encontrado para ${member.user.tag} (${member.id}).`
+          );
+        }
+      }
+    } else {
+      console.log(`[guildMemberRemove] Nenhum cadastro encontrado para ${member.user.tag} (${member.id}).`);
+    }
+
     await removerDadosUsuarioDoBanco(member.id);
-    console.log(`Dados do usuário ${member.user.tag} removidos do banco após sair do servidor.`);
+    console.log(`[guildMemberRemove] Dados do usuário ${member.user.tag} (${member.id}) removidos do banco.`);
   } catch (error) {
-    console.error(`Erro ao remover dados do usuário ${member.user.tag} após saída do servidor:`, error);
+    console.error(`[guildMemberRemove] Erro ao processar saída de ${member.user.tag} (${member.id}):`, error);
   }
 });
 
