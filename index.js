@@ -29,6 +29,11 @@ const CADASTRO_MODAL_ID = 'modal_cadastro';
 const CADASTRO_BUTTON_ID = 'abrir_cadastro';
 const CADASTRO_IMAGE_PATH = 'C:\\Users\\Pc\\Desktop\\Projeto Vsync\\solicite_cadastro.png';
 const PAINEL_PRINCIPAL_CANAL_ID = process.env.PAINEL_PRINCIPAL_CANAL_ID || '1487117541838163978';
+const CANAL_APROVACAO_LAVAGEM_ID = process.env.CANAL_APROVACAO_LAVAGEM_ID || '1487109511306149918';
+const CANAL_REGISTRO_LAVAGEM_ID = process.env.CANAL_REGISTRO_LAVAGEM_ID || '1487109544780763256';
+const LAVAGEM_MODAL_PREFIX = 'modal_lavagem_';
+const LAVAGEM_APROVAR_PREFIX = 'aprovar_lavagem_';
+const LAVAGEM_RECUSAR_PREFIX = 'recusar_lavagem_';
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
@@ -247,6 +252,112 @@ async function buscarCadastroPorUsuario(discordUserId) {
   return result.rows[0] || null;
 }
 
+async function salvarLavagem(dados) {
+  const result = await db.query(
+    `
+      INSERT INTO lavagens (
+        tipo,
+        usuario_tag,
+        usuario_id,
+        quantidade,
+        grupo,
+        personagem_id,
+        taxa_percentual,
+        valor_faccao,
+        valor_cliente,
+        status,
+        mensagem_aprovacao_id,
+        canal_aprovacao_id,
+        criado_em,
+        atualizado_em
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+      RETURNING *
+    `,
+    [
+      dados.tipo,
+      dados.usuarioTag,
+      dados.usuarioId,
+      dados.quantidade,
+      dados.grupo,
+      dados.personagemId,
+      dados.taxaPercentual,
+      dados.valorFaccao,
+      dados.valorCliente,
+      dados.status,
+      dados.mensagemAprovacaoId || null,
+      dados.canalAprovacaoId || null,
+      dados.criadoEm,
+      dados.atualizadoEm
+    ]
+  );
+
+  return result.rows[0];
+}
+
+async function atualizarMensagemAprovacaoLavagem(lavagemId, mensagemId, canalId) {
+  await db.query(
+    `
+      UPDATE lavagens
+      SET mensagem_aprovacao_id = $1,
+          canal_aprovacao_id = $2,
+          atualizado_em = $3
+      WHERE id = $4
+    `,
+    [mensagemId, canalId, new Date(), lavagemId]
+  );
+}
+
+async function buscarLavagemPorId(lavagemId) {
+  const result = await db.query(
+    `
+      SELECT *
+      FROM lavagens
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [lavagemId]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function aprovarLavagem(lavagemId, aprovador) {
+  const result = await db.query(
+    `
+      UPDATE lavagens
+      SET status = 'aprovada',
+          aprovado_por_id = $1,
+          aprovado_por_tag = $2,
+          atualizado_em = $3
+      WHERE id = $4
+        AND status = 'pendente'
+      RETURNING *
+    `,
+    [aprovador.id, aprovador.tag, new Date(), lavagemId]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function recusarLavagem(lavagemId, recusador) {
+  const result = await db.query(
+    `
+      UPDATE lavagens
+      SET status = 'recusada',
+          recusado_por_id = $1,
+          recusado_por_tag = $2,
+          atualizado_em = $3
+      WHERE id = $4
+        AND status = 'pendente'
+      RETURNING *
+    `,
+    [recusador.id, recusador.tag, new Date(), lavagemId]
+  );
+
+  return result.rows[0] || null;
+}
+
 function normalizarEspacos(texto) {
   return texto.replace(/\s+/g, ' ').trim();
 }
@@ -272,6 +383,275 @@ function sanitizarNomeCanal(nome) {
 
 function gerarNomeCanalCadastro(nomeFormatado, personagemId) {
   return `${sanitizarNomeCanal(nomeFormatado)}-${personagemId}`.slice(0, 100);
+}
+
+function formatarMoeda(valor) {
+  return new Intl.NumberFormat('pt-BR').format(Number(valor || 0));
+}
+
+function obterConfigLavagem(tipo) {
+  if (tipo === 'parceria') {
+    return {
+      tipo,
+      titulo: 'Lavagem Parceria',
+      taxaPercentual: 20,
+      cor: 0x2f3136
+    };
+  }
+
+  return {
+    tipo: 'pista',
+    titulo: 'Lavagem Pista',
+    taxaPercentual: 30,
+    cor: 0x2f3136
+  };
+}
+
+function calcularValoresLavagem(quantidade, taxaPercentual) {
+  const valorTotal = Number(quantidade);
+  const valorFaccao = Math.floor((valorTotal * taxaPercentual) / 100);
+  const valorCliente = valorTotal - valorFaccao;
+
+  return {
+    valorTotal,
+    valorFaccao,
+    valorCliente
+  };
+}
+
+function criarModalLavagem(tipo) {
+  const config = obterConfigLavagem(tipo);
+  const modal = new ModalBuilder()
+    .setCustomId(`${LAVAGEM_MODAL_PREFIX}${config.tipo}`)
+    .setTitle(config.titulo);
+
+  const quantidadeInput = new TextInputBuilder()
+    .setCustomId('quantidade')
+    .setLabel('Quantidade para lavar')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setPlaceholder('Ex.: 1000000')
+    .setMaxLength(12);
+
+  const grupoInput = new TextInputBuilder()
+    .setCustomId('grupo')
+    .setLabel('Grupo')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setPlaceholder('Ex.: Grupo Norte')
+    .setMaxLength(60);
+
+  const personagemIdInput = new TextInputBuilder()
+    .setCustomId('personagem_id')
+    .setLabel('ID do personagem que está lavando')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setPlaceholder('Ex.: 6001')
+    .setMaxLength(10);
+
+  modal.addComponents(
+    new ActionRowBuilder().addComponents(quantidadeInput),
+    new ActionRowBuilder().addComponents(grupoInput),
+    new ActionRowBuilder().addComponents(personagemIdInput)
+  );
+
+  return modal;
+}
+
+function criarEmbedAprovacaoLavagem(lavagem) {
+  const config = obterConfigLavagem(lavagem.tipo);
+
+  return new EmbedBuilder()
+    .setColor(config.cor)
+    .setTitle(`Aprovação Pendente • ${config.titulo}`)
+    .setDescription('Avalie a solicitação abaixo.')
+    .addFields(
+      { name: 'Solicitante', value: `<@${lavagem.usuario_id}>`, inline: false },
+      { name: 'Grupo', value: lavagem.grupo, inline: true },
+      { name: 'ID do Personagem', value: lavagem.personagem_id, inline: true },
+      { name: 'Valor Total', value: formatarMoeda(lavagem.quantidade), inline: true },
+      { name: 'Taxa da Facção', value: `${lavagem.taxa_percentual}%`, inline: true },
+      { name: 'Valor da Facção', value: formatarMoeda(lavagem.valor_faccao), inline: true },
+      { name: 'Valor do Cliente', value: formatarMoeda(lavagem.valor_cliente), inline: true },
+      { name: 'Status', value: 'Pendente', inline: true }
+    )
+    .setFooter({ text: `Lavagem #${lavagem.id}` })
+    .setTimestamp(new Date(lavagem.criado_em));
+}
+
+function criarBotoesAprovacaoLavagem(lavagemId, desabilitado = false) {
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`${LAVAGEM_APROVAR_PREFIX}${lavagemId}`)
+        .setLabel('Aprovar')
+        .setStyle(ButtonStyle.Success)
+        .setDisabled(desabilitado),
+      new ButtonBuilder()
+        .setCustomId(`${LAVAGEM_RECUSAR_PREFIX}${lavagemId}`)
+        .setLabel('Recusar')
+        .setStyle(ButtonStyle.Danger)
+        .setDisabled(desabilitado)
+    )
+  ];
+}
+
+function criarEmbedRegistroLavagem(lavagem) {
+  const config = obterConfigLavagem(lavagem.tipo);
+
+  return new EmbedBuilder()
+    .setColor(config.cor)
+    .setTitle(config.titulo)
+    .setDescription('Lavagem aprovada e contabilizada com sucesso.')
+    .addFields(
+      { name: 'Solicitante', value: `<@${lavagem.usuario_id}>`, inline: false },
+      { name: 'Grupo', value: lavagem.grupo, inline: true },
+      { name: 'ID do Personagem', value: lavagem.personagem_id, inline: true },
+      { name: 'Valor Total', value: formatarMoeda(lavagem.quantidade), inline: true },
+      { name: 'Taxa da Facção', value: `${lavagem.taxa_percentual}%`, inline: true },
+      { name: 'Valor da Facção', value: formatarMoeda(lavagem.valor_faccao), inline: true },
+      { name: 'Valor do Cliente', value: formatarMoeda(lavagem.valor_cliente), inline: true },
+      { name: 'Aprovado por', value: lavagem.aprovado_por_tag || 'Não informado', inline: true }
+    )
+    .setFooter({ text: `Lavagem #${lavagem.id}` })
+    .setTimestamp(new Date(lavagem.atualizado_em || lavagem.criado_em));
+}
+
+async function processarModalLavagem(interaction, tipo) {
+  const config = obterConfigLavagem(tipo);
+  const quantidadeTexto = interaction.fields.getTextInputValue('quantidade').trim();
+  const grupo = normalizarEspacos(interaction.fields.getTextInputValue('grupo'));
+  const personagemId = interaction.fields.getTextInputValue('personagem_id').trim();
+
+  if (!/^\d+$/.test(quantidadeTexto)) {
+    return interaction.reply({
+      content: 'A quantidade para lavar deve conter apenas números inteiros.',
+      ephemeral: true
+    });
+  }
+
+  if (!/^\d+$/.test(personagemId)) {
+    return interaction.reply({
+      content: 'O ID do personagem deve conter apenas números.',
+      ephemeral: true
+    });
+  }
+
+  if (!grupo || grupo.length < 2) {
+    return interaction.reply({
+      content: 'Informe um grupo válido.',
+      ephemeral: true
+    });
+  }
+
+  const quantidade = Number(quantidadeTexto);
+
+  if (quantidade <= 0) {
+    return interaction.reply({
+      content: 'A quantidade para lavar deve ser maior que zero.',
+      ephemeral: true
+    });
+  }
+
+  const valores = calcularValoresLavagem(quantidade, config.taxaPercentual);
+  await interaction.deferReply({ ephemeral: true });
+
+  const lavagem = await salvarLavagem({
+    tipo: config.tipo,
+    usuarioTag: interaction.user.tag,
+    usuarioId: interaction.user.id,
+    quantidade: valores.valorTotal,
+    grupo,
+    personagemId,
+    taxaPercentual: config.taxaPercentual,
+    valorFaccao: valores.valorFaccao,
+    valorCliente: valores.valorCliente,
+    status: 'pendente',
+    criadoEm: new Date(),
+    atualizadoEm: new Date()
+  });
+
+  const canalAprovacao = await client.channels.fetch(CANAL_APROVACAO_LAVAGEM_ID).catch(() => null);
+
+  if (!canalAprovacao || canalAprovacao.type !== ChannelType.GuildText) {
+    throw new Error('Canal de aprovação de lavagem não encontrado ou inválido.');
+  }
+
+  const mensagemAprovacao = await canalAprovacao.send({
+    embeds: [criarEmbedAprovacaoLavagem(lavagem)],
+    components: criarBotoesAprovacaoLavagem(lavagem.id)
+  });
+
+  await atualizarMensagemAprovacaoLavagem(lavagem.id, mensagemAprovacao.id, canalAprovacao.id);
+
+  return interaction.editReply({
+    content: `${config.titulo} enviada para aprovação com sucesso.`
+  });
+}
+
+async function finalizarLavagem(interaction, lavagemId, acao) {
+  const lavagem = await buscarLavagemPorId(lavagemId);
+
+  if (!lavagem) {
+    return interaction.reply({
+      content: 'Não encontrei essa solicitação de lavagem.',
+      ephemeral: true
+    });
+  }
+
+  if (lavagem.status !== 'pendente') {
+    return interaction.reply({
+      content: `Essa lavagem já foi ${lavagem.status}.`,
+      ephemeral: true
+    });
+  }
+
+  await interaction.deferReply({ ephemeral: true });
+
+  const lavagemAtualizada = acao === 'aprovar'
+    ? await aprovarLavagem(lavagemId, interaction.user)
+    : await recusarLavagem(lavagemId, interaction.user);
+
+  if (!lavagemAtualizada) {
+    return interaction.editReply({
+      content: 'Essa lavagem já foi processada por outra pessoa.'
+    });
+  }
+
+  const embedAtualizado = criarEmbedAprovacaoLavagem(lavagemAtualizada)
+    .setDescription(
+      acao === 'aprovar'
+        ? `Solicitação aprovada por <@${interaction.user.id}>.`
+        : `Solicitação recusada por <@${interaction.user.id}>.`
+    )
+    .spliceFields(7, 1, {
+      name: 'Status',
+      value: acao === 'aprovar' ? 'Aprovada' : 'Recusada',
+      inline: true
+    });
+
+  await interaction.message.edit({
+    embeds: [embedAtualizado],
+    components: criarBotoesAprovacaoLavagem(lavagemId, true)
+  });
+
+  if (acao === 'aprovar') {
+    const canalRegistro = await client.channels.fetch(CANAL_REGISTRO_LAVAGEM_ID).catch(() => null);
+
+    if (!canalRegistro || canalRegistro.type !== ChannelType.GuildText) {
+      throw new Error('Canal de registro de lavagem não encontrado ou inválido.');
+    }
+
+    await canalRegistro.send({
+      embeds: [criarEmbedRegistroLavagem(lavagemAtualizada)]
+    });
+  }
+
+  return interaction.editReply({
+    content: acao === 'aprovar'
+      ? 'Lavagem aprovada e registrada com sucesso.'
+      : 'Lavagem recusada com sucesso.'
+  });
 }
 
 function criarModalCadastro() {
@@ -990,11 +1370,37 @@ client.on('interactionCreate', async interaction => {
       if (interaction.customId === CADASTRO_MODAL_ID) {
         return processarCadastro(interaction);
       }
+
+      if (interaction.customId === `${LAVAGEM_MODAL_PREFIX}parceria`) {
+        return processarModalLavagem(interaction, 'parceria');
+      }
+
+      if (interaction.customId === `${LAVAGEM_MODAL_PREFIX}pista`) {
+        return processarModalLavagem(interaction, 'pista');
+      }
     }
 
     if (interaction.isButton()) {
       if (interaction.customId === CADASTRO_BUTTON_ID) {
         return interaction.showModal(criarModalCadastro());
+      }
+
+      if (interaction.customId === 'lavagem_parceria') {
+        return interaction.showModal(criarModalLavagem('parceria'));
+      }
+
+      if (interaction.customId === 'lavagem_pista') {
+        return interaction.showModal(criarModalLavagem('pista'));
+      }
+
+      if (interaction.customId.startsWith(LAVAGEM_APROVAR_PREFIX)) {
+        const lavagemId = Number(interaction.customId.slice(LAVAGEM_APROVAR_PREFIX.length));
+        return finalizarLavagem(interaction, lavagemId, 'aprovar');
+      }
+
+      if (interaction.customId.startsWith(LAVAGEM_RECUSAR_PREFIX)) {
+        const lavagemId = Number(interaction.customId.slice(LAVAGEM_RECUSAR_PREFIX.length));
+        return finalizarLavagem(interaction, lavagemId, 'recusar');
       }
 
       if (interaction.customId === 'farm' || interaction.customId === 'painel_farm') {
@@ -1091,8 +1497,6 @@ client.on('interactionCreate', async interaction => {
       }
 
       if (
-        interaction.customId === 'lavagem_parceria' ||
-        interaction.customId === 'lavagem_pista' ||
         interaction.customId === 'ver_todos_itens'
       ) {
         return interaction.reply({
