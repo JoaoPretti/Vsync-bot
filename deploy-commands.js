@@ -36,6 +36,20 @@ const commands = [
     .setDescription('Publica o painel persistente de cadastro neste canal'),
 
   new SlashCommandBuilder()
+    .setName('editar_cadastro')
+    .setDescription('Edita o cadastro de um membro')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addUserOption(option =>
+      option.setName('usuario').setDescription('Membro que terá o cadastro editado').setRequired(true)
+    )
+    .addStringOption(option =>
+      option.setName('nome').setDescription('Novo nome do personagem').setRequired(true)
+    )
+    .addStringOption(option =>
+      option.setName('id').setDescription('Novo ID do personagem').setRequired(true)
+    ),
+
+  new SlashCommandBuilder()
     .setName('relatorio_semanal')
     .setDescription('Mostra seus relatórios semanais'),
 

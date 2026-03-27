@@ -253,6 +253,20 @@ async function buscarCadastroPorUsuario(discordUserId) {
   return result.rows[0] || null;
 }
 
+async function buscarCadastroPorPersonagemId(personagemId) {
+  const result = await db.query(
+    `
+      SELECT *
+      FROM cadastros
+      WHERE personagem_id = $1
+      LIMIT 1
+    `,
+    [personagemId]
+  );
+
+  return result.rows[0] || null;
+}
+
 async function salvarLavagem(dados) {
   const result = await db.query(
     `
@@ -470,6 +484,16 @@ function sanitizarNomeCanal(nome) {
 
 function gerarNomeCanalCadastro(nomeFormatado, personagemId) {
   return `${sanitizarNomeCanal(nomeFormatado)}-${personagemId}`.slice(0, 100);
+}
+
+async function validarPersonagemIdDisponivel(personagemId, discordUserId) {
+  const cadastroExistente = await buscarCadastroPorPersonagemId(personagemId);
+
+  if (cadastroExistente && cadastroExistente.discord_user_id !== discordUserId) {
+    return cadastroExistente;
+  }
+
+  return null;
 }
 
 function formatarMoeda(valor) {
@@ -970,52 +994,40 @@ async function criarOuAtualizarCanalCadastro(guild, membro, nomeFormatado, perso
   return guild.channels.create(canalCreateData);
 }
 
-async function processarCadastro(interaction) {
-  if (!interaction.inGuild()) {
-    return interaction.reply({
-      content: 'Esse cadastro só pode ser feito dentro do servidor.',
-      ephemeral: true
-    });
-  }
-
-  const nomeBruto = interaction.fields.getTextInputValue('personagem_nome');
-  const personagemId = interaction.fields.getTextInputValue('personagem_id').trim();
+async function aplicarCadastroUsuario(guild, user, nomeBruto, personagemId) {
   const nomeFormatado = capitalizarNomePersonagem(nomeBruto);
 
   if (!nomeFormatado || nomeFormatado.length < 3) {
-    return interaction.reply({
-      content: 'Informe um nome de personagem válido.',
-      ephemeral: true
-    });
+    throw new Error('Informe um nome de personagem válido.');
   }
 
   if (!/^\d+$/.test(personagemId)) {
-    return interaction.reply({
-      content: 'O ID do personagem deve conter apenas números.',
-      ephemeral: true
-    });
+    throw new Error('O ID do personagem deve conter apenas números.');
   }
 
-  await interaction.deferReply({ ephemeral: true });
+  const conflitoCadastro = await validarPersonagemIdDisponivel(personagemId, user.id);
 
-  const guild = interaction.guild;
-  const membro = await guild.members.fetch(interaction.user.id);
+  if (conflitoCadastro) {
+    throw new Error(`O ID ${personagemId} já está cadastrado para outro usuário.`);
+  }
+
+  const membro = await guild.members.fetch(user.id);
   const apelido = `${nomeFormatado} | ${personagemId}`;
   const canal = await criarOuAtualizarCanalCadastro(guild, membro, nomeFormatado, personagemId);
 
   await membro.setNickname(apelido).catch(error => {
-    console.error(`Não foi possível alterar o apelido de ${interaction.user.tag}:`, error);
+    console.error(`Não foi possível alterar o apelido de ${user.tag}:`, error);
   });
 
   if (process.env.CARGO_CADASTRADO_ID) {
     await membro.roles.add(process.env.CARGO_CADASTRADO_ID).catch(error => {
-      console.error(`Falha ao adicionar cargo de cadastro para ${interaction.user.tag}:`, error);
+      console.error(`Falha ao adicionar cargo de cadastro para ${user.tag}:`, error);
     });
   }
 
   await salvarOuAtualizarCadastro({
-    discordUserId: interaction.user.id,
-    discordTag: interaction.user.tag,
+    discordUserId: user.id,
+    discordTag: user.tag,
     guildId: guild.id,
     personagemNome: nomeBruto.trim(),
     personagemNomeFormatado: nomeFormatado,
@@ -1027,23 +1039,59 @@ async function processarCadastro(interaction) {
     atualizadoEm: new Date()
   });
 
+  return {
+    nomeFormatado,
+    personagemId,
+    apelido,
+    canal
+  };
+}
+
+async function processarCadastro(interaction) {
+  if (!interaction.inGuild()) {
+    return interaction.reply({
+      content: 'Esse cadastro só pode ser feito dentro do servidor.',
+      ephemeral: true
+    });
+  }
+
+  const nomeBruto = interaction.fields.getTextInputValue('personagem_nome');
+  const personagemId = interaction.fields.getTextInputValue('personagem_id').trim();
+
+  await interaction.deferReply({ ephemeral: true });
+
+  let resultadoCadastro;
+
+  try {
+    resultadoCadastro = await aplicarCadastroUsuario(
+      interaction.guild,
+      interaction.user,
+      nomeBruto,
+      personagemId
+    );
+  } catch (error) {
+    return interaction.editReply({
+      content: error.message || 'Não foi possível concluir o cadastro.'
+    });
+  }
+
   const embedCanal = new EmbedBuilder()
     .setColor(0x2f3136)
     .setTitle('Cadastro Recebido')
     .setDescription([
       `Bem-vindo, <@${interaction.user.id}>.`,
       '',
-      `**Personagem:** ${nomeFormatado}`,
-      `**ID:** ${personagemId}`,
+      `**Personagem:** ${resultadoCadastro.nomeFormatado}`,
+      `**ID:** ${resultadoCadastro.personagemId}`,
       '',
       'Use este canal para falar com a gerência, tirar dúvidas e acompanhar seu processo.'
     ].join('\n'))
     .setTimestamp();
 
-  await canal.send({ content: `<@${interaction.user.id}>`, embeds: [embedCanal] });
+  await resultadoCadastro.canal.send({ content: `<@${interaction.user.id}>`, embeds: [embedCanal] });
 
   return interaction.editReply({
-    content: `Cadastro concluído com sucesso. Seu canal foi criado em <#${canal.id}>.`
+    content: `Cadastro concluído com sucesso. Seu canal foi criado em <#${resultadoCadastro.canal.id}>.`
   });
 }
 
@@ -1275,6 +1323,48 @@ client.on('interactionCreate', async interaction => {
         return interaction.reply({
           content: 'Painel de cadastro publicado neste canal.',
           ephemeral: true
+        });
+      }
+
+      if (interaction.commandName === 'editar_cadastro') {
+        if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+          return interaction.reply({
+            content: 'Você não tem permissão para editar cadastros.',
+            ephemeral: true
+          });
+        }
+
+        const usuario = interaction.options.getUser('usuario', true);
+        const nomeBruto = interaction.options.getString('nome', true);
+        const personagemId = interaction.options.getString('id', true).trim();
+        const cadastroAtual = await buscarCadastroPorUsuario(usuario.id);
+
+        if (!cadastroAtual) {
+          return interaction.reply({
+            content: 'Esse usuário ainda não possui cadastro.',
+            ephemeral: true
+          });
+        }
+
+        await interaction.deferReply({ ephemeral: true });
+
+        let resultadoCadastro;
+
+        try {
+          resultadoCadastro = await aplicarCadastroUsuario(
+            interaction.guild,
+            usuario,
+            nomeBruto,
+            personagemId
+          );
+        } catch (error) {
+          return interaction.editReply({
+            content: error.message || 'Não foi possível editar o cadastro.'
+          });
+        }
+
+        return interaction.editReply({
+          content: `Cadastro de <@${usuario.id}> atualizado para ${resultadoCadastro.nomeFormatado} | ${resultadoCadastro.personagemId}. Canal: <#${resultadoCadastro.canal.id}>`
         });
       }
 
