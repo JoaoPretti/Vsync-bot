@@ -1105,6 +1105,20 @@ async function finalizarAcao(interaction, acaoId) {
     embeds: [criarEmbedLogAcao(acaoAtualizada || acaoFinalizada, participantes)]
   });
 
+  if (acao.mensagem_id) {
+    const canalOrigem = await client.channels.fetch(acao.canal_id).catch(() => null);
+
+    if (canalOrigem && 'messages' in canalOrigem) {
+      const mensagemAcao = await canalOrigem.messages.fetch(acao.mensagem_id).catch(() => null);
+
+      if (mensagemAcao) {
+        await mensagemAcao.delete().catch(error => {
+          console.error(`Não foi possível apagar a mensagem da ação #${acaoId}:`, error);
+        });
+      }
+    }
+  }
+
   return interaction.reply({
     content: 'Ação finalizada e log registrado com sucesso.',
     ephemeral: true
