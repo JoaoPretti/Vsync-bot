@@ -15,6 +15,9 @@ const {
 const db = require('./database/db');
 const initDatabase = require('./database/init');
 
+// `?v=` ajuda a evitar cache antigo da thumbnail no Discord/CDN.
+const PAINEL_THUMBNAIL_URL = 'https://i.postimg.cc/jqvvgNnM/screenshot-288.png?v=20260327-1';
+
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
@@ -231,7 +234,7 @@ function criarPainel() {
       '**📦 Registro de Baú**',
       'Abra o painel do baú para registrar retirada e entrada.'
     ].join('\n'))
-    .setThumbnail('https://i.postimg.cc/jqvvgNnM/screenshot-288.png')
+    .setThumbnail(PAINEL_THUMBNAIL_URL)
     .setFooter({ text: 'VSYNC • Painel Central' })
     .setTimestamp();
 
