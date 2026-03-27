@@ -231,7 +231,7 @@ function criarPainel() {
       '**📦 Registro de Baú**',
       'Abra o painel do baú para registrar retirada e entrada.'
     ].join('\n'))
-    .setThumbnail('https://i.imgur.com/0TeacfY.png')
+    .setThumbnail('https://i.postimg.cc/jqvvgNnM/screenshot-288.png')
     .setFooter({ text: 'VSYNC • Painel Central' })
     .setTimestamp();
 
