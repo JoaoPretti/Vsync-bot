@@ -454,6 +454,12 @@ async function processarCadastro(interaction) {
     console.error(`Não foi possível alterar o apelido de ${interaction.user.tag}:`, error);
   });
 
+  if (process.env.CARGO_CADASTRADO_ID) {
+    await membro.roles.add(process.env.CARGO_CADASTRADO_ID).catch(error => {
+      console.error(`Falha ao adicionar cargo de cadastro para ${interaction.user.tag}:`, error);
+    });
+  }
+
   await salvarOuAtualizarCadastro({
     discordUserId: interaction.user.id,
     discordTag: interaction.user.tag,
