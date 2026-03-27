@@ -43,7 +43,10 @@ const ACAO_SELECT_TIPO_PREFIX = 'acao_tipo_';
 const ACAO_SELECT_RESULTADO_PREFIX = 'acao_resultado_';
 const ACAO_ENTRAR_PREFIX = 'acao_entrar_';
 const ACAO_SAIR_PREFIX = 'acao_sair_';
+const ACAO_COMANDO_PREFIX = 'acao_comando_';
 const ACAO_FINALIZAR_PREFIX = 'acao_finalizar_';
+const PAINEL_ACOES_CANAL_ID = process.env.PAINEL_ACOES_CANAL_ID || '1487176112860696686';
+const CANAL_LOG_ACOES_ID = process.env.CANAL_LOG_ACOES_ID || '1487176260437409863';
 
 // Edite esta estrutura para cadastrar as ações disponíveis em cada categoria.
 const ACOES_DISPONIVEIS = {
@@ -368,7 +371,7 @@ async function buscarAcaoPorId(acaoId) {
 }
 
 async function atualizarCampoAcao(acaoId, campo, valor) {
-  const camposPermitidos = new Set(['nome_acao', 'tipo_acao', 'resultado', 'status', 'finalizado_em']);
+  const camposPermitidos = new Set(['nome_acao', 'comando_texto', 'tipo_acao', 'resultado', 'status', 'finalizado_em']);
 
   if (!camposPermitidos.has(campo)) {
     throw new Error('Campo de ação não permitido.');
@@ -692,14 +695,6 @@ function criarModalAcao(tamanho) {
     .setCustomId(`${ACAO_MODAL_PREFIX}${tamanho}`)
     .setTitle(obterLabelTamanhoAcao(tamanho));
 
-  const comandoInput = new TextInputBuilder()
-    .setCustomId('comando_acao')
-    .setLabel('Quem é o comando da ação')
-    .setStyle(TextInputStyle.Short)
-    .setRequired(true)
-    .setMaxLength(80)
-    .setPlaceholder('Ex.: @White ou 123456789012345678');
-
   const quantidadeInput = new TextInputBuilder()
     .setCustomId('quantidade_participantes')
     .setLabel('Quantidade de participantes')
@@ -717,7 +712,6 @@ function criarModalAcao(tamanho) {
     .setPlaceholder('Ex.: 1125000');
 
   modal.addComponents(
-    new ActionRowBuilder().addComponents(comandoInput),
     new ActionRowBuilder().addComponents(quantidadeInput),
     new ActionRowBuilder().addComponents(dinheiroInput)
   );
@@ -781,6 +775,43 @@ function criarPainelAcoes() {
   };
 }
 
+async function publicarOuAtualizarPainelAcoes() {
+  if (!PAINEL_ACOES_CANAL_ID) {
+    return;
+  }
+
+  const painel = criarPainelAcoes();
+  const arquivos = obterArquivosPainelAcoes();
+  const canal = await client.channels.fetch(PAINEL_ACOES_CANAL_ID).catch(() => null);
+
+  if (!canal || canal.type !== ChannelType.GuildText) {
+    console.error('Canal do painel de ações não encontrado ou inválido.');
+    return;
+  }
+
+  const mensagens = await canal.messages.fetch({ limit: 20 });
+  const mensagemExistente = mensagens.find(message =>
+    message.author.id === client.user.id &&
+    message.embeds.some(embed => embed.title === painel.embed.data.title)
+  );
+
+  const payload = {
+    embeds: [painel.embed],
+    components: painel.components,
+    files: arquivos
+  };
+
+  if (mensagemExistente) {
+    await mensagemExistente.edit({
+      embeds: [painel.embed],
+      components: painel.components
+    });
+    return;
+  }
+
+  await canal.send(payload);
+}
+
 function criarSelectAcoesDisponiveis(acaoId, tamanho, desabilitado = false) {
   const opcoes = (ACOES_DISPONIVEIS[tamanho] || []).slice(0, 25).map(acao => ({
     label: acao.slice(0, 100),
@@ -837,6 +868,11 @@ function criarBotoesAcao(acaoId, desabilitado = false) {
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(desabilitado),
     new ButtonBuilder()
+      .setCustomId(`${ACAO_COMANDO_PREFIX}${acaoId}`)
+      .setLabel('Assumir Comando')
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(desabilitado),
+    new ButtonBuilder()
       .setCustomId(`${ACAO_FINALIZAR_PREFIX}${acaoId}`)
       .setLabel('Finalizar')
       .setStyle(ButtonStyle.Primary)
@@ -853,7 +889,7 @@ function criarEmbedAcao(acao, participantes) {
     .setColor(0x2f3136)
     .setTitle(acao.nome_acao || `${obterLabelTamanhoAcao(acao.tamanho)} em andamento`)
     .setDescription([
-      `**Comando da ação:** ${acao.comando_texto}`,
+      `**Comando da ação:** ${acao.comando_texto || 'Ninguém assumiu o comando ainda'}`,
       `**Ação iniciada:** <t:${Math.floor(new Date(acao.iniciado_em).getTime() / 1000)}:f>`,
       '',
       `**Qtd. Participantes:** ${participantes.length}/${acao.quantidade_participantes}`,
@@ -880,7 +916,7 @@ function criarEmbedLogAcao(acao, participantes) {
     .setColor(0x2f3136)
     .setTitle(acao.nome_acao || obterLabelTamanhoAcao(acao.tamanho))
     .setDescription([
-      `**Comando da ação:** ${acao.comando_texto}`,
+      `**Comando da ação:** ${acao.comando_texto || 'Não definido'}`,
       `**Ação iniciada:** <t:${Math.floor(new Date(acao.iniciado_em).getTime() / 1000)}:f>`,
       '',
       `**Qtd. Participantes:** ${participantes.length}`,
@@ -941,9 +977,6 @@ async function processarModalAcao(interaction, tamanho) {
     });
   }
 
-  const comandoTexto = normalizarTextoComandoAcao(
-    interaction.fields.getTextInputValue('comando_acao')
-  );
   const quantidadeParticipantesTexto = interaction.fields.getTextInputValue('quantidade_participantes').trim();
   const dinheiroTexto = interaction.fields.getTextInputValue('dinheiro').trim();
 
@@ -965,7 +998,7 @@ async function processarModalAcao(interaction, tamanho) {
 
   const acao = await salvarAcao({
     tamanho,
-    comandoTexto,
+    comandoTexto: null,
     quantidadeParticipantes: Number(quantidadeParticipantesTexto),
     dinheiro: Number(dinheiroTexto),
     criadorId: interaction.user.id,
@@ -1001,6 +1034,13 @@ async function finalizarAcao(interaction, acaoId) {
     });
   }
 
+  if (!acao.comando_texto) {
+    return interaction.reply({
+      content: 'É necessário que alguém assuma o comando da ação antes de finalizar.',
+      ephemeral: true
+    });
+  }
+
   if (!participantes.length) {
     return interaction.reply({
       content: 'É necessário ter ao menos um participante confirmado para finalizar.',
@@ -1012,8 +1052,17 @@ async function finalizarAcao(interaction, acaoId) {
   await atualizarCampoAcao(acaoId, 'finalizado_em', new Date());
   const acaoAtualizada = await buscarAcaoPorId(acaoId);
 
+  const canalLog = await client.channels.fetch(CANAL_LOG_ACOES_ID).catch(() => null);
+
+  if (!canalLog || canalLog.type !== ChannelType.GuildText) {
+    return interaction.reply({
+      content: 'Não encontrei o canal de log de ações configurado.',
+      ephemeral: true
+    });
+  }
+
   await renderizarMensagemAcao(interaction, acaoId, true);
-  await interaction.channel.send({
+  await canalLog.send({
     embeds: [criarEmbedLogAcao(acaoAtualizada || acaoFinalizada, participantes)]
   });
 
@@ -1774,6 +1823,10 @@ client.once('ready', () => {
   publicarOuAtualizarPainelPrincipal().catch(error => {
     console.error('Erro ao publicar o painel principal persistente:', error);
   });
+
+  publicarOuAtualizarPainelAcoes().catch(error => {
+    console.error('Erro ao publicar o painel de ações persistente:', error);
+  });
 });
 
 client.on('guildMemberRemove', async member => {
@@ -1828,18 +1881,10 @@ client.on('interactionCreate', async interaction => {
             ephemeral: true
           });
         }
-
-        const painelAcoes = criarPainelAcoes();
-        const arquivos = obterArquivosPainelAcoes();
-
-        await interaction.channel.send({
-          embeds: [painelAcoes.embed],
-          components: painelAcoes.components,
-          files: arquivos
-        });
+        await publicarOuAtualizarPainelAcoes();
 
         return interaction.reply({
-          content: 'Painel de ações publicado neste canal.',
+          content: `Painel de ações sincronizado no canal <#${PAINEL_ACOES_CANAL_ID}>.`,
           ephemeral: true
         });
       }
@@ -2146,6 +2191,17 @@ client.on('interactionCreate', async interaction => {
         await renderizarMensagemAcao(interaction, acaoId);
         return interaction.reply({
           content: 'Você saiu da ação.',
+          ephemeral: true
+        });
+      }
+
+      if (interaction.customId.startsWith(ACAO_COMANDO_PREFIX)) {
+        const acaoId = Number(interaction.customId.slice(ACAO_COMANDO_PREFIX.length));
+        await adicionarParticipanteAcao(acaoId, interaction.user);
+        await atualizarCampoAcao(acaoId, 'comando_texto', `<@${interaction.user.id}>`);
+        await renderizarMensagemAcao(interaction, acaoId);
+        return interaction.reply({
+          content: 'Você assumiu o comando da ação.',
           ephemeral: true
         });
       }
