@@ -1165,6 +1165,7 @@ client.on('interactionCreate', async interaction => {
         const quantidade = interaction.options.getInteger('quantidade', true);
         const foto = interaction.options.getAttachment('foto');
         const link = interaction.options.getString('link');
+        const cadastroUsuario = await buscarCadastroPorUsuario(interaction.user.id);
 
         const imagem = foto?.url || link || null;
 
@@ -1202,6 +1203,23 @@ client.on('interactionCreate', async interaction => {
         }
 
         await canal.send({ embeds: [embed] });
+
+        if (cadastroUsuario?.canal_id) {
+          const canalPrivado = await client.channels.fetch(cadastroUsuario.canal_id).catch(() => null);
+
+          if (
+            canalPrivado &&
+            (
+              canalPrivado.type === ChannelType.GuildText ||
+              canalPrivado.type === ChannelType.PublicThread ||
+              canalPrivado.type === ChannelType.PrivateThread
+            )
+          ) {
+            await canalPrivado.send({ embeds: [embed] }).catch(error => {
+              console.error(`Falha ao enviar registro de farm para o canal privado de ${interaction.user.tag}:`, error);
+            });
+          }
+        }
 
         await salvarRegistroBanco({
           tipo: 'farm',
