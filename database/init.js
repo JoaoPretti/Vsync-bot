@@ -79,7 +79,7 @@ async function initDatabase() {
       id SERIAL PRIMARY KEY,
       tamanho TEXT NOT NULL,
       nome_acao TEXT,
-      comando_texto TEXT NOT NULL,
+      comando_texto TEXT,
       quantidade_participantes INTEGER NOT NULL,
       tipo_acao TEXT,
       resultado TEXT,
@@ -92,6 +92,12 @@ async function initDatabase() {
       iniciado_em TIMESTAMP NOT NULL,
       finalizado_em TIMESTAMP
     )
+  `);
+
+  // Migração para instalações anteriores em que `comando_texto` era obrigatório.
+  await db.query(`
+    ALTER TABLE acoes
+    ALTER COLUMN comando_texto DROP NOT NULL
   `);
 
   console.log('INIT 6 - criando tabela acao_participantes');
