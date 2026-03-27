@@ -36,6 +36,11 @@ const commands = [
     .setDescription('Publica o painel persistente de cadastro neste canal'),
 
   new SlashCommandBuilder()
+    .setName('painel_acoes')
+    .setDescription('Publica o painel de controle de ações neste canal')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
+
+  new SlashCommandBuilder()
     .setName('editar_cadastro')
     .setDescription('Edita o cadastro de um membro')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)

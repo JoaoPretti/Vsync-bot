@@ -9,6 +9,7 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  StringSelectMenuBuilder,
   ChannelType,
   ModalBuilder,
   TextInputBuilder,
@@ -34,6 +35,34 @@ const CANAL_REGISTRO_LAVAGEM_ID = process.env.CANAL_REGISTRO_LAVAGEM_ID || '1487
 const LAVAGEM_MODAL_PREFIX = 'modal_lavagem_';
 const LAVAGEM_APROVAR_PREFIX = 'aprovar_lavagem_';
 const LAVAGEM_RECUSAR_PREFIX = 'recusar_lavagem_';
+const ACOES_PAINEL_IMAGE_PATH = 'C:\\Users\\Pc\\Desktop\\Projeto Vsync\\Painel_Ações.png';
+const ACOES_PAINEL_BANNER_URL = 'attachment://painel_acoes.png';
+const ACAO_MODAL_PREFIX = 'modal_acao_';
+const ACAO_SELECT_NOME_PREFIX = 'acao_nome_';
+const ACAO_SELECT_TIPO_PREFIX = 'acao_tipo_';
+const ACAO_SELECT_RESULTADO_PREFIX = 'acao_resultado_';
+const ACAO_ENTRAR_PREFIX = 'acao_entrar_';
+const ACAO_SAIR_PREFIX = 'acao_sair_';
+const ACAO_FINALIZAR_PREFIX = 'acao_finalizar_';
+
+// Edite esta estrutura para cadastrar as ações disponíveis em cada categoria.
+const ACOES_DISPONIVEIS = {
+  pequena: [
+    'Galinheiro - N° 68',
+    'Loja de Conveniência',
+    'Mercadinho'
+  ],
+  media: [
+    'Joalheria',
+    'Banco Fleeca',
+    'Caminhão'
+  ],
+  grande: [
+    'Banco Central',
+    'Cassino',
+    'Yacht'
+  ]
+};
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
@@ -265,6 +294,138 @@ async function buscarCadastroPorPersonagemId(personagemId) {
   );
 
   return result.rows[0] || null;
+}
+
+async function salvarAcao(dados) {
+  const result = await db.query(
+    `
+      INSERT INTO acoes (
+        tamanho,
+        nome_acao,
+        comando_texto,
+        quantidade_participantes,
+        tipo_acao,
+        resultado,
+        dinheiro,
+        criador_id,
+        criador_tag,
+        canal_id,
+        mensagem_id,
+        status,
+        iniciado_em,
+        finalizado_em
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+      RETURNING *
+    `,
+    [
+      dados.tamanho,
+      dados.nomeAcao || null,
+      dados.comandoTexto,
+      dados.quantidadeParticipantes,
+      dados.tipoAcao || null,
+      dados.resultado || null,
+      dados.dinheiro,
+      dados.criadorId,
+      dados.criadorTag,
+      dados.canalId,
+      dados.mensagemId || null,
+      dados.status || 'em_andamento',
+      dados.iniciadoEm,
+      dados.finalizadoEm || null
+    ]
+  );
+
+  return result.rows[0];
+}
+
+async function atualizarMensagemAcao(acaoId, mensagemId) {
+  const result = await db.query(
+    `
+      UPDATE acoes
+      SET mensagem_id = $1
+      WHERE id = $2
+      RETURNING *
+    `,
+    [mensagemId, acaoId]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function buscarAcaoPorId(acaoId) {
+  const result = await db.query(
+    `
+      SELECT *
+      FROM acoes
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [acaoId]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function atualizarCampoAcao(acaoId, campo, valor) {
+  const camposPermitidos = new Set(['nome_acao', 'tipo_acao', 'resultado', 'status', 'finalizado_em']);
+
+  if (!camposPermitidos.has(campo)) {
+    throw new Error('Campo de ação não permitido.');
+  }
+
+  const result = await db.query(
+    `
+      UPDATE acoes
+      SET ${campo} = $1
+      WHERE id = $2
+      RETURNING *
+    `,
+    [valor, acaoId]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function adicionarParticipanteAcao(acaoId, usuario) {
+  await db.query(
+    `
+      INSERT INTO acao_participantes (
+        acao_id,
+        usuario_id,
+        usuario_tag,
+        criado_em
+      )
+      VALUES ($1,$2,$3,$4)
+      ON CONFLICT (acao_id, usuario_id) DO NOTHING
+    `,
+    [acaoId, usuario.id, usuario.tag, new Date()]
+  );
+}
+
+async function removerParticipanteAcao(acaoId, usuarioId) {
+  await db.query(
+    `
+      DELETE FROM acao_participantes
+      WHERE acao_id = $1
+        AND usuario_id = $2
+    `,
+    [acaoId, usuarioId]
+  );
+}
+
+async function buscarParticipantesAcao(acaoId) {
+  const result = await db.query(
+    `
+      SELECT usuario_id, usuario_tag
+      FROM acao_participantes
+      WHERE acao_id = $1
+      ORDER BY criado_em ASC
+    `,
+    [acaoId]
+  );
+
+  return result.rows;
 }
 
 async function salvarLavagem(dados) {
@@ -503,6 +664,363 @@ function formatarMoeda(valor) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(Number(valor || 0));
+}
+
+function normalizarTextoComandoAcao(texto) {
+  const valor = normalizarEspacos(texto);
+  const mencao = valor.match(/^<@!?(\d+)>$/);
+
+  if (mencao) {
+    return `<@${mencao[1]}>`;
+  }
+
+  if (/^\d+$/.test(valor)) {
+    return `<@${valor}>`;
+  }
+
+  return valor;
+}
+
+function obterLabelTamanhoAcao(tamanho) {
+  if (tamanho === 'pequena') return 'Ação Pequena';
+  if (tamanho === 'media') return 'Ação Média';
+  return 'Ação Grande';
+}
+
+function criarModalAcao(tamanho) {
+  const modal = new ModalBuilder()
+    .setCustomId(`${ACAO_MODAL_PREFIX}${tamanho}`)
+    .setTitle(obterLabelTamanhoAcao(tamanho));
+
+  const comandoInput = new TextInputBuilder()
+    .setCustomId('comando_acao')
+    .setLabel('Quem é o comando da ação')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setMaxLength(80)
+    .setPlaceholder('Ex.: @White ou 123456789012345678');
+
+  const quantidadeInput = new TextInputBuilder()
+    .setCustomId('quantidade_participantes')
+    .setLabel('Quantidade de participantes')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setMaxLength(3)
+    .setPlaceholder('Ex.: 8');
+
+  const dinheiroInput = new TextInputBuilder()
+    .setCustomId('dinheiro')
+    .setLabel('Dinheiro')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setMaxLength(12)
+    .setPlaceholder('Ex.: 1125000');
+
+  modal.addComponents(
+    new ActionRowBuilder().addComponents(comandoInput),
+    new ActionRowBuilder().addComponents(quantidadeInput),
+    new ActionRowBuilder().addComponents(dinheiroInput)
+  );
+
+  return modal;
+}
+
+function obterArquivosPainelAcoes() {
+  if (!fs.existsSync(ACOES_PAINEL_IMAGE_PATH)) {
+    return [];
+  }
+
+  return [new AttachmentBuilder(ACOES_PAINEL_IMAGE_PATH, { name: 'painel_acoes.png' })];
+}
+
+function criarPainelAcoes() {
+  const possuiBannerLocal = fs.existsSync(ACOES_PAINEL_IMAGE_PATH);
+  const embed = new EmbedBuilder()
+    .setColor(0x2f3136)
+    .setTitle('Criar Relatório de Ação')
+    .setDescription([
+      'Este canal é destinado ao **registro de ações blipadas**.',
+      '',
+      '━━━━━━━━━━━━━━━━━━',
+      '• Selecione o tipo de ação realizada no menu abaixo.',
+      '• Informe se a ação é no tiro, fuga ou arma branca.',
+      '• Solicite que todos os membros participantes confirmem sua participação.',
+      '• As informações serão registradas para fins de controle, estatística e histórico.',
+      '',
+      '📌 Utilize este recurso sempre que houver qualquer tipo de ação blipada em andamento.'
+    ].join('\n'))
+    .setThumbnail(CADASTRO_THUMBNAIL_URL)
+    .setFooter({ text: 'VSYNC • Painel de Ações' })
+    .setTimestamp();
+
+  if (possuiBannerLocal) {
+    embed.setImage(ACOES_PAINEL_BANNER_URL);
+  }
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('acao_pequena')
+      .setLabel('Ações Pequenas')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🏳️'),
+    new ButtonBuilder()
+      .setCustomId('acao_media')
+      .setLabel('Ações Médias')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🏳️'),
+    new ButtonBuilder()
+      .setCustomId('acao_grande')
+      .setLabel('Ações Grandes')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🏳️')
+  );
+
+  return {
+    embed,
+    components: [row]
+  };
+}
+
+function criarSelectAcoesDisponiveis(acaoId, tamanho, desabilitado = false) {
+  const opcoes = (ACOES_DISPONIVEIS[tamanho] || []).slice(0, 25).map(acao => ({
+    label: acao.slice(0, 100),
+    value: acao
+  }));
+
+  return new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(`${ACAO_SELECT_NOME_PREFIX}${acaoId}`)
+      .setPlaceholder('Escolha a ação')
+      .setDisabled(desabilitado || opcoes.length === 0)
+      .addOptions(opcoes.length ? opcoes : [{ label: 'Cadastre ações em ACOES_DISPONIVEIS', value: 'indisponivel' }])
+  );
+}
+
+function criarSelectTipoAcao(acaoId, desabilitado = false) {
+  return new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(`${ACAO_SELECT_TIPO_PREFIX}${acaoId}`)
+      .setPlaceholder('Escolha o tipo da ação')
+      .setDisabled(desabilitado)
+      .addOptions(
+        { label: 'Tiro', value: 'Tiro' },
+        { label: 'Fuga', value: 'Fuga' },
+        { label: 'Arma Branca', value: 'Arma Branca' }
+      )
+  );
+}
+
+function criarSelectResultadoAcao(acaoId, desabilitado = false) {
+  return new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(`${ACAO_SELECT_RESULTADO_PREFIX}${acaoId}`)
+      .setPlaceholder('Escolha o resultado final')
+      .setDisabled(desabilitado)
+      .addOptions(
+        { label: 'Vitória', value: 'Vitória' },
+        { label: 'Derrota', value: 'Derrota' },
+        { label: 'Empate', value: 'Empate' }
+      )
+  );
+}
+
+function criarBotoesAcao(acaoId, desabilitado = false) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`${ACAO_ENTRAR_PREFIX}${acaoId}`)
+      .setLabel('Entrar')
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(desabilitado),
+    new ButtonBuilder()
+      .setCustomId(`${ACAO_SAIR_PREFIX}${acaoId}`)
+      .setLabel('Sair')
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(desabilitado),
+    new ButtonBuilder()
+      .setCustomId(`${ACAO_FINALIZAR_PREFIX}${acaoId}`)
+      .setLabel('Finalizar')
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(desabilitado)
+  );
+}
+
+function criarEmbedAcao(acao, participantes) {
+  const listaParticipantes = participantes.length
+    ? participantes.map(participante => `<@${participante.usuario_id}>`).join('\n')
+    : 'Nenhum participante confirmado ainda.';
+
+  return new EmbedBuilder()
+    .setColor(0x2f3136)
+    .setTitle(acao.nome_acao || `${obterLabelTamanhoAcao(acao.tamanho)} em andamento`)
+    .setDescription([
+      `**Comando da ação:** ${acao.comando_texto}`,
+      `**Ação iniciada:** <t:${Math.floor(new Date(acao.iniciado_em).getTime() / 1000)}:f>`,
+      '',
+      `**Qtd. Participantes:** ${participantes.length}/${acao.quantidade_participantes}`,
+      `**Tipo da Ação:** ${acao.tipo_acao || 'Não definido'}`,
+      `**Resultado:** ${acao.resultado || 'Em andamento'}`,
+      '',
+      `**Dinheiro:** ${formatarMoeda(acao.dinheiro)}`,
+      '',
+      '**Participantes**',
+      listaParticipantes
+    ].join('\n'))
+    .setFooter({ text: `Ação #${acao.id}` })
+    .setTimestamp();
+}
+
+function criarEmbedLogAcao(acao, participantes) {
+  const totalParticipantes = participantes.length || 1;
+  const valorPorPessoa = Math.floor(Number(acao.dinheiro || 0) / totalParticipantes);
+  const listaParticipantes = participantes.length
+    ? participantes.map(participante => `<@${participante.usuario_id}>`).join('\n')
+    : 'Nenhum participante confirmado.';
+
+  return new EmbedBuilder()
+    .setColor(0x2f3136)
+    .setTitle(acao.nome_acao || obterLabelTamanhoAcao(acao.tamanho))
+    .setDescription([
+      `**Comando da ação:** ${acao.comando_texto}`,
+      `**Ação iniciada:** <t:${Math.floor(new Date(acao.iniciado_em).getTime() / 1000)}:f>`,
+      '',
+      `**Qtd. Participantes:** ${participantes.length}`,
+      `**Tipo da Ação:** ${acao.tipo_acao || 'Não definido'}`,
+      `**Resultado:** ${acao.resultado || 'Não definido'}`,
+      '',
+      `**Dinheiro:** ${formatarMoeda(acao.dinheiro)}`,
+      '',
+      '**Participantes**',
+      listaParticipantes,
+      '',
+      `**Valor por pessoa:** ${formatarMoeda(valorPorPessoa)}`,
+      `**Finalizada:** <t:${Math.floor(new Date(acao.finalizado_em || new Date()).getTime() / 1000)}:f>`
+    ].join('\n'))
+    .setFooter({ text: `Ação #${acao.id}` })
+    .setTimestamp(new Date(acao.finalizado_em || new Date()));
+}
+
+async function renderizarMensagemAcao(interactionOrChannel, acaoId, desabilitado = false) {
+  const acao = await buscarAcaoPorId(acaoId);
+
+  if (!acao) {
+    return null;
+  }
+
+  const participantes = await buscarParticipantesAcao(acaoId);
+  const payload = {
+    embeds: [criarEmbedAcao(acao, participantes)],
+    components: [
+      criarSelectAcoesDisponiveis(acaoId, acao.tamanho, desabilitado),
+      criarSelectTipoAcao(acaoId, desabilitado),
+      criarSelectResultadoAcao(acaoId, desabilitado),
+      criarBotoesAcao(acaoId, desabilitado)
+    ]
+  };
+
+  if (acao.mensagem_id) {
+    const canal = interactionOrChannel.channel || interactionOrChannel;
+    const mensagem = await canal.messages.fetch(acao.mensagem_id).catch(() => null);
+
+    if (mensagem) {
+      await mensagem.edit(payload);
+      return mensagem;
+    }
+  }
+
+  const canal = interactionOrChannel.channel || interactionOrChannel;
+  const mensagem = await canal.send(payload);
+  await atualizarMensagemAcao(acaoId, mensagem.id);
+  return mensagem;
+}
+
+async function processarModalAcao(interaction, tamanho) {
+  if (!interaction.inGuild()) {
+    return interaction.reply({
+      content: 'Essa ação só pode ser criada dentro do servidor.',
+      ephemeral: true
+    });
+  }
+
+  const comandoTexto = normalizarTextoComandoAcao(
+    interaction.fields.getTextInputValue('comando_acao')
+  );
+  const quantidadeParticipantesTexto = interaction.fields.getTextInputValue('quantidade_participantes').trim();
+  const dinheiroTexto = interaction.fields.getTextInputValue('dinheiro').trim();
+
+  if (!/^\d+$/.test(quantidadeParticipantesTexto) || Number(quantidadeParticipantesTexto) <= 0) {
+    return interaction.reply({
+      content: 'A quantidade de participantes deve ser um número inteiro maior que zero.',
+      ephemeral: true
+    });
+  }
+
+  if (!/^\d+$/.test(dinheiroTexto) || Number(dinheiroTexto) <= 0) {
+    return interaction.reply({
+      content: 'O valor em dinheiro deve ser um número inteiro maior que zero.',
+      ephemeral: true
+    });
+  }
+
+  await interaction.deferReply({ ephemeral: true });
+
+  const acao = await salvarAcao({
+    tamanho,
+    comandoTexto,
+    quantidadeParticipantes: Number(quantidadeParticipantesTexto),
+    dinheiro: Number(dinheiroTexto),
+    criadorId: interaction.user.id,
+    criadorTag: interaction.user.tag,
+    canalId: interaction.channelId,
+    status: 'em_andamento',
+    iniciadoEm: new Date()
+  });
+
+  const mensagem = await renderizarMensagemAcao(interaction, acao.id);
+
+  return interaction.editReply({
+    content: `Ação criada com sucesso em ${mensagem ? `<#${interaction.channelId}>` : 'este canal'}.`
+  });
+}
+
+async function finalizarAcao(interaction, acaoId) {
+  const acao = await buscarAcaoPorId(acaoId);
+
+  if (!acao) {
+    return interaction.reply({
+      content: 'Não encontrei essa ação.',
+      ephemeral: true
+    });
+  }
+
+  const participantes = await buscarParticipantesAcao(acaoId);
+
+  if (!acao.nome_acao || !acao.tipo_acao || !acao.resultado) {
+    return interaction.reply({
+      content: 'Defina a ação, o tipo e o resultado antes de finalizar.',
+      ephemeral: true
+    });
+  }
+
+  if (!participantes.length) {
+    return interaction.reply({
+      content: 'É necessário ter ao menos um participante confirmado para finalizar.',
+      ephemeral: true
+    });
+  }
+
+  const acaoFinalizada = await atualizarCampoAcao(acaoId, 'status', 'finalizada');
+  await atualizarCampoAcao(acaoId, 'finalizado_em', new Date());
+  const acaoAtualizada = await buscarAcaoPorId(acaoId);
+
+  await renderizarMensagemAcao(interaction, acaoId, true);
+  await interaction.channel.send({
+    embeds: [criarEmbedLogAcao(acaoAtualizada || acaoFinalizada, participantes)]
+  });
+
+  return interaction.reply({
+    content: 'Ação finalizada e log registrado com sucesso.',
+    ephemeral: true
+  });
 }
 
 function obterConfigLavagem(tipo) {
@@ -1303,6 +1821,29 @@ client.on('guildMemberRemove', async member => {
 client.on('interactionCreate', async interaction => {
   try {
     if (interaction.isChatInputCommand()) {
+      if (interaction.commandName === 'painel_acoes') {
+        if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
+          return interaction.reply({
+            content: 'Você não tem permissão para publicar o painel de ações.',
+            ephemeral: true
+          });
+        }
+
+        const painelAcoes = criarPainelAcoes();
+        const arquivos = obterArquivosPainelAcoes();
+
+        await interaction.channel.send({
+          embeds: [painelAcoes.embed],
+          components: painelAcoes.components,
+          files: arquivos
+        });
+
+        return interaction.reply({
+          content: 'Painel de ações publicado neste canal.',
+          ephemeral: true
+        });
+      }
+
       if (interaction.commandName === 'painel_cadastro') {
         if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
           return interaction.reply({
@@ -1540,11 +2081,35 @@ client.on('interactionCreate', async interaction => {
       if (interaction.customId === `${LAVAGEM_MODAL_PREFIX}pista`) {
         return processarModalLavagem(interaction, 'pista');
       }
+
+      if (interaction.customId === `${ACAO_MODAL_PREFIX}pequena`) {
+        return processarModalAcao(interaction, 'pequena');
+      }
+
+      if (interaction.customId === `${ACAO_MODAL_PREFIX}media`) {
+        return processarModalAcao(interaction, 'media');
+      }
+
+      if (interaction.customId === `${ACAO_MODAL_PREFIX}grande`) {
+        return processarModalAcao(interaction, 'grande');
+      }
     }
 
     if (interaction.isButton()) {
       if (interaction.customId === CADASTRO_BUTTON_ID) {
         return interaction.showModal(criarModalCadastro());
+      }
+
+      if (interaction.customId === 'acao_pequena') {
+        return interaction.showModal(criarModalAcao('pequena'));
+      }
+
+      if (interaction.customId === 'acao_media') {
+        return interaction.showModal(criarModalAcao('media'));
+      }
+
+      if (interaction.customId === 'acao_grande') {
+        return interaction.showModal(criarModalAcao('grande'));
       }
 
       if (interaction.customId === 'lavagem_parceria') {
@@ -1563,6 +2128,31 @@ client.on('interactionCreate', async interaction => {
       if (interaction.customId.startsWith(LAVAGEM_RECUSAR_PREFIX)) {
         const lavagemId = Number(interaction.customId.slice(LAVAGEM_RECUSAR_PREFIX.length));
         return finalizarLavagem(interaction, lavagemId, 'recusar');
+      }
+
+      if (interaction.customId.startsWith(ACAO_ENTRAR_PREFIX)) {
+        const acaoId = Number(interaction.customId.slice(ACAO_ENTRAR_PREFIX.length));
+        await adicionarParticipanteAcao(acaoId, interaction.user);
+        await renderizarMensagemAcao(interaction, acaoId);
+        return interaction.reply({
+          content: 'Você entrou na ação.',
+          ephemeral: true
+        });
+      }
+
+      if (interaction.customId.startsWith(ACAO_SAIR_PREFIX)) {
+        const acaoId = Number(interaction.customId.slice(ACAO_SAIR_PREFIX.length));
+        await removerParticipanteAcao(acaoId, interaction.user.id);
+        await renderizarMensagemAcao(interaction, acaoId);
+        return interaction.reply({
+          content: 'Você saiu da ação.',
+          ephemeral: true
+        });
+      }
+
+      if (interaction.customId.startsWith(ACAO_FINALIZAR_PREFIX)) {
+        const acaoId = Number(interaction.customId.slice(ACAO_FINALIZAR_PREFIX.length));
+        return finalizarAcao(interaction, acaoId);
       }
 
       if (interaction.customId === 'farm' || interaction.customId === 'painel_farm') {
@@ -1618,6 +2208,47 @@ client.on('interactionCreate', async interaction => {
         });
       }
 
+    }
+
+    if (interaction.isStringSelectMenu()) {
+      if (interaction.customId.startsWith(ACAO_SELECT_NOME_PREFIX)) {
+        const acaoId = Number(interaction.customId.slice(ACAO_SELECT_NOME_PREFIX.length));
+        const nomeAcao = interaction.values[0];
+
+        if (nomeAcao !== 'indisponivel') {
+          await atualizarCampoAcao(acaoId, 'nome_acao', nomeAcao);
+          await renderizarMensagemAcao(interaction, acaoId);
+        }
+
+        return interaction.reply({
+          content: nomeAcao === 'indisponivel'
+            ? 'Cadastre ações em ACOES_DISPONIVEIS antes de usar esta lista.'
+            : `Ação definida como ${nomeAcao}.`,
+          ephemeral: true
+        });
+      }
+
+      if (interaction.customId.startsWith(ACAO_SELECT_TIPO_PREFIX)) {
+        const acaoId = Number(interaction.customId.slice(ACAO_SELECT_TIPO_PREFIX.length));
+        const tipoAcao = interaction.values[0];
+        await atualizarCampoAcao(acaoId, 'tipo_acao', tipoAcao);
+        await renderizarMensagemAcao(interaction, acaoId);
+        return interaction.reply({
+          content: `Tipo da ação definido como ${tipoAcao}.`,
+          ephemeral: true
+        });
+      }
+
+      if (interaction.customId.startsWith(ACAO_SELECT_RESULTADO_PREFIX)) {
+        const acaoId = Number(interaction.customId.slice(ACAO_SELECT_RESULTADO_PREFIX.length));
+        const resultado = interaction.values[0];
+        await atualizarCampoAcao(acaoId, 'resultado', resultado);
+        await renderizarMensagemAcao(interaction, acaoId);
+        return interaction.reply({
+          content: `Resultado definido como ${resultado}.`,
+          ephemeral: true
+        });
+      }
     }
   } catch (error) {
     console.error('Erro na interação:', error);

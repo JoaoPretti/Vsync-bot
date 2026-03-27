@@ -73,7 +73,40 @@ async function initDatabase() {
     )
   `);
 
-  console.log('INIT 5 - banco inicializado');
+  console.log('INIT 5 - criando tabela acoes');
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS acoes (
+      id SERIAL PRIMARY KEY,
+      tamanho TEXT NOT NULL,
+      nome_acao TEXT,
+      comando_texto TEXT NOT NULL,
+      quantidade_participantes INTEGER NOT NULL,
+      tipo_acao TEXT,
+      resultado TEXT,
+      dinheiro INTEGER NOT NULL,
+      criador_id TEXT NOT NULL,
+      criador_tag TEXT NOT NULL,
+      canal_id TEXT NOT NULL,
+      mensagem_id TEXT,
+      status TEXT NOT NULL DEFAULT 'em_andamento',
+      iniciado_em TIMESTAMP NOT NULL,
+      finalizado_em TIMESTAMP
+    )
+  `);
+
+  console.log('INIT 6 - criando tabela acao_participantes');
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS acao_participantes (
+      id SERIAL PRIMARY KEY,
+      acao_id INTEGER NOT NULL REFERENCES acoes(id) ON DELETE CASCADE,
+      usuario_id TEXT NOT NULL,
+      usuario_tag TEXT NOT NULL,
+      criado_em TIMESTAMP NOT NULL,
+      UNIQUE (acao_id, usuario_id)
+    )
+  `);
+
+  console.log('INIT 7 - banco inicializado');
 }
 
 module.exports = initDatabase;
