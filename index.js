@@ -9,17 +9,28 @@ const {
   ButtonBuilder,
   ButtonStyle,
   StringSelectMenuBuilder,
-  ChannelType
+  ChannelType,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  PermissionFlagsBits,
+  AttachmentBuilder
 } = require('discord.js');
+const fs = require('fs');
 
 const db = require('./database/db');
 const initDatabase = require('./database/init');
 
 // `?v=` ajuda a evitar cache antigo da thumbnail no Discord/CDN.
 const PAINEL_THUMBNAIL_URL = 'https://i.postimg.cc/jqvvgNnM/screenshot-288.png?v=20260327-1';
+const CADASTRO_THUMBNAIL_URL = 'https://i.postimg.cc/jqvvgNnM/screenshot-288.png?v=20260327-1';
+const CADASTRO_BANNER_URL = 'attachment://solicite_cadastro.png';
+const CADASTRO_MODAL_ID = 'modal_cadastro';
+const CADASTRO_BUTTON_ID = 'abrir_cadastro';
+const CADASTRO_IMAGE_PATH = 'C:\\Users\\Pc\\Desktop\\Projeto Vsync\\solicite_cadastro.png';
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds]
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
 });
 
 /* =========================
@@ -174,6 +185,307 @@ async function buscarResumoSemanalGlobal() {
     usuario_id: row.usuario_id,
     total: Number(row.total || 0)
   }));
+}
+
+async function salvarOuAtualizarCadastro(dados) {
+  await db.query(
+    `
+      INSERT INTO cadastros (
+        discord_user_id,
+        discord_tag,
+        guild_id,
+        personagem_nome,
+        personagem_nome_formatado,
+        personagem_id,
+        nickname_aplicado,
+        canal_id,
+        canal_nome,
+        criado_em,
+        atualizado_em
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+      ON CONFLICT (discord_user_id)
+      DO UPDATE SET
+        discord_tag = EXCLUDED.discord_tag,
+        guild_id = EXCLUDED.guild_id,
+        personagem_nome = EXCLUDED.personagem_nome,
+        personagem_nome_formatado = EXCLUDED.personagem_nome_formatado,
+        personagem_id = EXCLUDED.personagem_id,
+        nickname_aplicado = EXCLUDED.nickname_aplicado,
+        canal_id = EXCLUDED.canal_id,
+        canal_nome = EXCLUDED.canal_nome,
+        atualizado_em = EXCLUDED.atualizado_em
+    `,
+    [
+      dados.discordUserId,
+      dados.discordTag,
+      dados.guildId,
+      dados.personagemNome,
+      dados.personagemNomeFormatado,
+      dados.personagemId,
+      dados.nicknameAplicado,
+      dados.canalId,
+      dados.canalNome,
+      dados.criadoEm,
+      dados.atualizadoEm
+    ]
+  );
+}
+
+async function buscarCadastroPorUsuario(discordUserId) {
+  const result = await db.query(
+    `
+      SELECT *
+      FROM cadastros
+      WHERE discord_user_id = $1
+      LIMIT 1
+    `,
+    [discordUserId]
+  );
+
+  return result.rows[0] || null;
+}
+
+function normalizarEspacos(texto) {
+  return texto.replace(/\s+/g, ' ').trim();
+}
+
+function capitalizarNomePersonagem(nome) {
+  return normalizarEspacos(nome)
+    .split(' ')
+    .filter(Boolean)
+    .map(parte => parte.charAt(0).toUpperCase() + parte.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function sanitizarNomeCanal(nome) {
+  return nome
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
+function gerarNomeCanalCadastro(nomeFormatado, personagemId) {
+  return `${sanitizarNomeCanal(nomeFormatado)}-${personagemId}`.slice(0, 100);
+}
+
+function criarModalCadastro() {
+  const modal = new ModalBuilder()
+    .setCustomId(CADASTRO_MODAL_ID)
+    .setTitle('Cadastro VSYNC');
+
+  const nomeInput = new TextInputBuilder()
+    .setCustomId('personagem_nome')
+    .setLabel('Nome do personagem')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setMaxLength(60)
+    .setPlaceholder('Ex.: Caruso Scofield');
+
+  const idInput = new TextInputBuilder()
+    .setCustomId('personagem_id')
+    .setLabel('ID do personagem')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setMaxLength(10)
+    .setPlaceholder('Ex.: 6001');
+
+  modal.addComponents(
+    new ActionRowBuilder().addComponents(nomeInput),
+    new ActionRowBuilder().addComponents(idInput)
+  );
+
+  return modal;
+}
+
+function criarPainelCadastro() {
+  const possuiBannerLocal = fs.existsSync(CADASTRO_IMAGE_PATH);
+  const embed = new EmbedBuilder()
+    .setColor(0x2f3136)
+    .setTitle('Registro no Discord')
+    .setDescription([
+      'Faça seu registro corretamente e aguarde a aprovação da gerência.',
+      '',
+      '━━━━━━━━━━━━━━━━━━',
+      '**Registro Facção**',
+      '',
+      '• Clique nas opções abaixo para fazer seu registro dentro do Discord.',
+      '• Um canal privado exclusivo será criado só para você e a gerência.',
+      '• Nesse canal você poderá tirar dúvidas, resolver pendências e registrar farm.'
+    ].join('\n'))
+    .setThumbnail(CADASTRO_THUMBNAIL_URL)
+    .setFooter({ text: 'VSYNC • Painel de Cadastro' })
+    .setTimestamp();
+
+  if (possuiBannerLocal) {
+    embed.setImage(CADASTRO_BANNER_URL);
+  }
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(CADASTRO_BUTTON_ID)
+      .setLabel('Registro no Discord')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🪪')
+  );
+
+  return {
+    embed,
+    components: [row]
+  };
+}
+
+function obterArquivosPainelCadastro() {
+  if (!fs.existsSync(CADASTRO_IMAGE_PATH)) {
+    return [];
+  }
+
+  return [new AttachmentBuilder(CADASTRO_IMAGE_PATH)];
+}
+
+async function criarOuAtualizarCanalCadastro(guild, membro, nomeFormatado, personagemId) {
+  const categoriaId = process.env.CATEGORIA_CADASTRO_ID || null;
+  const cargoGerenciaId = process.env.CARGO_GERENCIA_ID || null;
+  const nomeCanal = gerarNomeCanalCadastro(nomeFormatado, personagemId);
+  const cadastroExistente = await buscarCadastroPorUsuario(membro.id);
+  let canal = null;
+
+  if (cadastroExistente?.canal_id) {
+    canal = await guild.channels.fetch(cadastroExistente.canal_id).catch(() => null);
+  }
+
+  const permissionOverwrites = [
+    {
+      id: guild.roles.everyone.id,
+      deny: [PermissionFlagsBits.ViewChannel]
+    },
+    {
+      id: membro.id,
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.AttachFiles,
+        PermissionFlagsBits.EmbedLinks
+      ]
+    }
+  ];
+
+  if (cargoGerenciaId) {
+    permissionOverwrites.push({
+      id: cargoGerenciaId,
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.ManageMessages
+      ]
+    });
+  }
+
+  if (canal) {
+    const canalEditData = {
+      name: nomeCanal,
+      permissionOverwrites,
+      topic: `Cadastro de ${nomeFormatado} | ${personagemId}`
+    };
+
+    if (categoriaId) {
+      canalEditData.parent = categoriaId;
+    }
+
+    await canal.edit(canalEditData);
+
+    return canal;
+  }
+
+  const canalCreateData = {
+    name: nomeCanal,
+    type: ChannelType.GuildText,
+    topic: `Cadastro de ${nomeFormatado} | ${personagemId}`,
+    permissionOverwrites
+  };
+
+  if (categoriaId) {
+    canalCreateData.parent = categoriaId;
+  }
+
+  return guild.channels.create(canalCreateData);
+}
+
+async function processarCadastro(interaction) {
+  if (!interaction.inGuild()) {
+    return interaction.reply({
+      content: 'Esse cadastro só pode ser feito dentro do servidor.',
+      ephemeral: true
+    });
+  }
+
+  const nomeBruto = interaction.fields.getTextInputValue('personagem_nome');
+  const personagemId = interaction.fields.getTextInputValue('personagem_id').trim();
+  const nomeFormatado = capitalizarNomePersonagem(nomeBruto);
+
+  if (!nomeFormatado || nomeFormatado.length < 3) {
+    return interaction.reply({
+      content: 'Informe um nome de personagem válido.',
+      ephemeral: true
+    });
+  }
+
+  if (!/^\d+$/.test(personagemId)) {
+    return interaction.reply({
+      content: 'O ID do personagem deve conter apenas números.',
+      ephemeral: true
+    });
+  }
+
+  await interaction.deferReply({ ephemeral: true });
+
+  const guild = interaction.guild;
+  const membro = await guild.members.fetch(interaction.user.id);
+  const apelido = `${nomeFormatado} | ${personagemId}`;
+  const canal = await criarOuAtualizarCanalCadastro(guild, membro, nomeFormatado, personagemId);
+
+  await membro.setNickname(apelido).catch(error => {
+    console.error(`Não foi possível alterar o apelido de ${membro.user.tag}:`, error);
+  });
+
+  await salvarOuAtualizarCadastro({
+    discordUserId: interaction.user.id,
+    discordTag: interaction.user.tag,
+    guildId: guild.id,
+    personagemNome: nomeBruto.trim(),
+    personagemNomeFormatado: nomeFormatado,
+    personagemId,
+    nicknameAplicado: apelido,
+    canalId: canal.id,
+    canalNome: canal.name,
+    criadoEm: new Date(),
+    atualizadoEm: new Date()
+  });
+
+  const embedCanal = new EmbedBuilder()
+    .setColor(0x2f3136)
+    .setTitle('Cadastro Recebido')
+    .setDescription([
+      `Bem-vindo, <@${interaction.user.id}>.`,
+      '',
+      `**Personagem:** ${nomeFormatado}`,
+      `**ID:** ${personagemId}`,
+      '',
+      'Use este canal para falar com a gerência, tirar dúvidas e acompanhar seu processo.'
+    ].join('\n'))
+    .setTimestamp();
+
+  await canal.send({ content: `<@${interaction.user.id}>`, embeds: [embedCanal] });
+
+  return interaction.editReply({
+    content: `Cadastro concluído com sucesso. Seu canal foi criado em <#${canal.id}>.`
+  });
 }
 
 /* =========================
@@ -465,6 +777,29 @@ client.once('ready', () => {
 client.on('interactionCreate', async interaction => {
   try {
     if (interaction.isChatInputCommand()) {
+      if (interaction.commandName === 'painel_cadastro') {
+        if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
+          return interaction.reply({
+            content: 'Você não tem permissão para publicar o painel de cadastro.',
+            ephemeral: true
+          });
+        }
+
+        const painelCadastro = criarPainelCadastro();
+        const arquivos = obterArquivosPainelCadastro();
+
+        await interaction.channel.send({
+          embeds: [painelCadastro.embed],
+          components: painelCadastro.components,
+          files: arquivos
+        });
+
+        return interaction.reply({
+          content: 'Painel de cadastro publicado neste canal.',
+          ephemeral: true
+        });
+      }
+
       if (interaction.commandName === 'painel') {
         const painel = criarPainel();
         return interaction.reply({
@@ -607,7 +942,17 @@ client.on('interactionCreate', async interaction => {
       }
     }
 
+    if (interaction.isModalSubmit()) {
+      if (interaction.customId === CADASTRO_MODAL_ID) {
+        return processarCadastro(interaction);
+      }
+    }
+
     if (interaction.isButton()) {
+      if (interaction.customId === CADASTRO_BUTTON_ID) {
+        return interaction.showModal(criarModalCadastro());
+      }
+
       if (interaction.customId === 'farm' || interaction.customId === 'painel_farm') {
         const registros = await buscarRegistrosFarmPorUsuario(interaction.user.id);
 
@@ -758,16 +1103,6 @@ async function testarConexaoBanco() {
   } catch (error) {
     console.error('❌ Erro ao conectar no banco:', error);
     throw error;
-  }
-}
-
-async function startBot() {
-  try {
-    await initDatabase();
-    await client.login(process.env.DISCORD_TOKEN);
-  } catch (error) {
-    console.error('Erro ao iniciar o bot:', error);
-    process.exit(1);
   }
 }
 

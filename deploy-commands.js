@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-const { REST, Routes, SlashCommandBuilder } = require('discord.js');
+const { REST, Routes, SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 
 const ITENS = [
   { name: 'Água', value: 'agua' },
@@ -30,6 +30,11 @@ const commands = [
   new SlashCommandBuilder()
     .setName('painel')
     .setDescription('Abre o painel central'),
+
+  new SlashCommandBuilder()
+    .setName('painel_cadastro')
+    .setDescription('Publica o painel persistente de cadastro neste canal')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
 
   new SlashCommandBuilder()
     .setName('relatorio_semanal')

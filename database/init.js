@@ -30,7 +30,25 @@ async function initDatabase() {
     )
   `);
 
-  console.log('INIT 3 - banco inicializado');
+  console.log('INIT 3 - criando tabela cadastros');
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS cadastros (
+      id SERIAL PRIMARY KEY,
+      discord_user_id TEXT NOT NULL UNIQUE,
+      discord_tag TEXT NOT NULL,
+      guild_id TEXT NOT NULL,
+      personagem_nome TEXT NOT NULL,
+      personagem_nome_formatado TEXT NOT NULL,
+      personagem_id TEXT NOT NULL,
+      nickname_aplicado TEXT NOT NULL,
+      canal_id TEXT,
+      canal_nome TEXT,
+      criado_em TIMESTAMP NOT NULL,
+      atualizado_em TIMESTAMP NOT NULL
+    )
+  `);
+
+  console.log('INIT 4 - banco inicializado');
 }
 
 module.exports = initDatabase;
