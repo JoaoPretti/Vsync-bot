@@ -339,6 +339,49 @@ async function aprovarLavagem(lavagemId, aprovador) {
   return result.rows[0] || null;
 }
 
+async function removerDadosUsuarioDoBanco(usuarioId) {
+  await db.query('BEGIN');
+
+  try {
+    await db.query(
+      `
+        DELETE FROM lavagens
+        WHERE usuario_id = $1
+      `,
+      [usuarioId]
+    );
+
+    await db.query(
+      `
+        DELETE FROM relatorios_semanais
+        WHERE usuario_id = $1
+      `,
+      [usuarioId]
+    );
+
+    await db.query(
+      `
+        DELETE FROM registros
+        WHERE usuario_id = $1
+      `,
+      [usuarioId]
+    );
+
+    await db.query(
+      `
+        DELETE FROM cadastros
+        WHERE discord_user_id = $1
+      `,
+      [usuarioId]
+    );
+
+    await db.query('COMMIT');
+  } catch (error) {
+    await db.query('ROLLBACK');
+    throw error;
+  }
+}
+
 async function recusarLavagem(lavagemId, recusador) {
   const result = await db.query(
     `
@@ -1124,6 +1167,15 @@ client.once('ready', () => {
   publicarOuAtualizarPainelPrincipal().catch(error => {
     console.error('Erro ao publicar o painel principal persistente:', error);
   });
+});
+
+client.on('guildMemberRemove', async member => {
+  try {
+    await removerDadosUsuarioDoBanco(member.id);
+    console.log(`Dados do usuário ${member.user.tag} removidos do banco após sair do servidor.`);
+  } catch (error) {
+    console.error(`Erro ao remover dados do usuário ${member.user.tag} após saída do servidor:`, error);
+  }
 });
 
 /* =========================
