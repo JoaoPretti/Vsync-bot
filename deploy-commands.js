@@ -33,8 +33,7 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName('painel_cadastro')
-    .setDescription('Publica o painel persistente de cadastro neste canal')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
+    .setDescription('Publica o painel persistente de cadastro neste canal'),
 
   new SlashCommandBuilder()
     .setName('relatorio_semanal')
