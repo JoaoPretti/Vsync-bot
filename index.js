@@ -4,6 +4,7 @@ const cron = require('node-cron');
 const {
   Client,
   GatewayIntentBits,
+  Partials,
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
@@ -35,7 +36,8 @@ const LAVAGEM_APROVAR_PREFIX = 'aprovar_lavagem_';
 const LAVAGEM_RECUSAR_PREFIX = 'recusar_lavagem_';
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
+  partials: [Partials.GuildMember, Partials.User]
 });
 
 /* =========================
@@ -1163,6 +1165,7 @@ console.log('Evento ready foi registrado.');
 
 client.once('ready', () => {
   console.log(`✅ Bot online como ${client.user.tag}`);
+  console.log('[startup] Intents ativos: Guilds, GuildMembers');
 });
 
 client.once('ready', () => {
