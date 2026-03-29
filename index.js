@@ -25,11 +25,8 @@ const {
   ACAO_COMANDO_PREFIX,
   ACAO_ENTRAR_PREFIX,
   ACAO_FINALIZAR_PREFIX,
-  ACAO_MODAL_PREFIX,
   ACAO_SAIR_PREFIX,
-  ACAO_SELECT_NOME_PREFIX,
   ACAO_SELECT_RESULTADO_PREFIX,
-  ACAO_SELECT_TIPO_PREFIX,
   ACOES_DISPONIVEIS,
   ACOES_PAINEL_BANNER_URL,
   ACOES_PAINEL_IMAGE_PATH,
@@ -678,35 +675,6 @@ function criarModalDetalhesRascunhoAcao(token, rascunho) {
   return modal;
 }
 
-function criarModalAcao(tamanho) {
-  const modal = new ModalBuilder()
-    .setCustomId(`${ACAO_MODAL_PREFIX}${tamanho}`)
-    .setTitle(obterLabelTamanhoAcao(tamanho));
-
-  const quantidadeInput = new TextInputBuilder()
-    .setCustomId('quantidade_participantes')
-    .setLabel('Quantidade de participantes')
-    .setStyle(TextInputStyle.Short)
-    .setRequired(true)
-    .setMaxLength(3)
-    .setPlaceholder('Ex.: 8');
-
-  const dinheiroInput = new TextInputBuilder()
-    .setCustomId('dinheiro')
-    .setLabel('Dinheiro')
-    .setStyle(TextInputStyle.Short)
-    .setRequired(true)
-    .setMaxLength(12)
-    .setPlaceholder('Ex.: 1125000');
-
-  modal.addComponents(
-    new ActionRowBuilder().addComponents(quantidadeInput),
-    new ActionRowBuilder().addComponents(dinheiroInput)
-  );
-
-  return modal;
-}
-
 function obterArquivosPainelAcoes() {
   if (!fs.existsSync(ACOES_PAINEL_IMAGE_PATH)) {
     return [];
@@ -798,35 +766,6 @@ async function publicarOuAtualizarPainelAcoes() {
   }
 
   await canal.send(payload);
-}
-
-function criarSelectAcoesDisponiveis(acaoId, tamanho, desabilitado = false) {
-  const opcoes = (ACOES_DISPONIVEIS[tamanho] || []).slice(0, 25).map(acao => ({
-    label: acao.slice(0, 100),
-    value: acao
-  }));
-
-  return new ActionRowBuilder().addComponents(
-    new StringSelectMenuBuilder()
-      .setCustomId(`${ACAO_SELECT_NOME_PREFIX}${acaoId}`)
-      .setPlaceholder('Escolha a ação')
-      .setDisabled(desabilitado || opcoes.length === 0)
-      .addOptions(opcoes.length ? opcoes : [{ label: 'Cadastre ações em ACOES_DISPONIVEIS', value: 'indisponivel' }])
-  );
-}
-
-function criarSelectTipoAcao(acaoId, desabilitado = false) {
-  return new ActionRowBuilder().addComponents(
-    new StringSelectMenuBuilder()
-      .setCustomId(`${ACAO_SELECT_TIPO_PREFIX}${acaoId}`)
-      .setPlaceholder('Escolha o tipo da ação')
-      .setDisabled(desabilitado)
-      .addOptions(
-        { label: 'Tiro', value: 'Tiro' },
-        { label: 'Fuga', value: 'Fuga' },
-        { label: 'Arma Branca', value: 'Arma Branca' }
-      )
-  );
 }
 
 function criarSelectResultadoAcao(acaoId, desabilitado = false) {
@@ -953,52 +892,6 @@ async function renderizarMensagemAcao(interactionOrChannel, acaoId, desabilitado
   const mensagem = await canal.send(payload);
   await atualizarMensagemAcao(acaoId, mensagem.id);
   return mensagem;
-}
-
-async function processarModalAcao(interaction, tamanho) {
-  if (!interaction.inGuild()) {
-    return interaction.reply({
-      content: 'Essa ação só pode ser criada dentro do servidor.',
-      ephemeral: true
-    });
-  }
-
-  const quantidadeParticipantesTexto = interaction.fields.getTextInputValue('quantidade_participantes').trim();
-  const dinheiroTexto = interaction.fields.getTextInputValue('dinheiro').trim();
-
-  if (!/^\d+$/.test(quantidadeParticipantesTexto) || Number(quantidadeParticipantesTexto) <= 0) {
-    return interaction.reply({
-      content: 'A quantidade de participantes deve ser um número inteiro maior que zero.',
-      ephemeral: true
-    });
-  }
-
-  if (!/^\d+$/.test(dinheiroTexto) || Number(dinheiroTexto) <= 0) {
-    return interaction.reply({
-      content: 'O valor em dinheiro deve ser um número inteiro maior que zero.',
-      ephemeral: true
-    });
-  }
-
-  await interaction.deferReply({ ephemeral: true });
-
-  const acao = await salvarAcao({
-    tamanho,
-    comandoTexto: null,
-    quantidadeParticipantes: Number(quantidadeParticipantesTexto),
-    dinheiro: Number(dinheiroTexto),
-    criadorId: interaction.user.id,
-    criadorTag: interaction.user.tag,
-    canalId: interaction.channelId,
-    status: 'em_andamento',
-    iniciadoEm: new Date()
-  });
-
-  const mensagem = await renderizarMensagemAcao(interaction, acao.id);
-
-  return interaction.editReply({
-    content: `Ação criada com sucesso em ${mensagem ? `<#${interaction.channelId}>` : 'este canal'}.`
-  });
 }
 
 async function finalizarAcao(interaction, acaoId) {

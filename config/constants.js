@@ -12,9 +12,6 @@ const LAVAGEM_APROVAR_PREFIX = 'aprovar_lavagem_';
 const LAVAGEM_RECUSAR_PREFIX = 'recusar_lavagem_';
 const ACOES_PAINEL_IMAGE_PATH = 'C:\\Users\\Pc\\Desktop\\Projeto Vsync\\Painel_Ações.png';
 const ACOES_PAINEL_BANNER_URL = 'attachment://painel_acoes.png';
-const ACAO_MODAL_PREFIX = 'modal_acao_';
-const ACAO_SELECT_NOME_PREFIX = 'acao_nome_';
-const ACAO_SELECT_TIPO_PREFIX = 'acao_tipo_';
 const ACAO_SELECT_RESULTADO_PREFIX = 'acao_resultado_';
 const ACAO_ENTRAR_PREFIX = 'acao_entrar_';
 const ACAO_SAIR_PREFIX = 'acao_sair_';
@@ -84,11 +81,8 @@ module.exports = {
   ACAO_COMANDO_PREFIX,
   ACAO_ENTRAR_PREFIX,
   ACAO_FINALIZAR_PREFIX,
-  ACAO_MODAL_PREFIX,
   ACAO_SAIR_PREFIX,
-  ACAO_SELECT_NOME_PREFIX,
   ACAO_SELECT_RESULTADO_PREFIX,
-  ACAO_SELECT_TIPO_PREFIX,
   ACOES_DISPONIVEIS,
   ACOES_PAINEL_BANNER_URL,
   ACOES_PAINEL_IMAGE_PATH,
