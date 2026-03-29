@@ -21,90 +21,35 @@ const fs = require('fs');
 
 const db = require('./database/db');
 const initDatabase = require('./database/init');
-
-// `?v=` ajuda a evitar cache antigo da thumbnail no Discord/CDN.
-const PAINEL_THUMBNAIL_URL = 'https://i.postimg.cc/jqvvgNnM/screenshot-288.png?v=20260327-1';
-const CADASTRO_THUMBNAIL_URL = 'https://i.postimg.cc/jqvvgNnM/screenshot-288.png?v=20260327-1';
-const CADASTRO_BANNER_URL = 'attachment://solicite_cadastro.png';
-const CADASTRO_MODAL_ID = 'modal_cadastro';
-const CADASTRO_BUTTON_ID = 'abrir_cadastro';
-const CADASTRO_IMAGE_PATH = 'C:\\Users\\Pc\\Desktop\\Projeto Vsync\\solicite_cadastro.png';
-const PAINEL_PRINCIPAL_CANAL_ID = process.env.PAINEL_PRINCIPAL_CANAL_ID || '1487117541838163978';
-const CANAL_APROVACAO_LAVAGEM_ID = process.env.CANAL_APROVACAO_LAVAGEM_ID || '1487109511306149918';
-const CANAL_REGISTRO_LAVAGEM_ID = process.env.CANAL_REGISTRO_LAVAGEM_ID || '1487109544780763256';
-const LAVAGEM_MODAL_PREFIX = 'modal_lavagem_';
-const LAVAGEM_APROVAR_PREFIX = 'aprovar_lavagem_';
-const LAVAGEM_RECUSAR_PREFIX = 'recusar_lavagem_';
-const ACOES_PAINEL_IMAGE_PATH = 'C:\\Users\\Pc\\Desktop\\Projeto Vsync\\Painel_Ações.png';
-const ACOES_PAINEL_BANNER_URL = 'attachment://painel_acoes.png';
-const ACAO_MODAL_PREFIX = 'modal_acao_';
-const ACAO_SELECT_NOME_PREFIX = 'acao_nome_';
-const ACAO_SELECT_TIPO_PREFIX = 'acao_tipo_';
-const ACAO_SELECT_RESULTADO_PREFIX = 'acao_resultado_';
-const ACAO_ENTRAR_PREFIX = 'acao_entrar_';
-const ACAO_SAIR_PREFIX = 'acao_sair_';
-const ACAO_COMANDO_PREFIX = 'acao_comando_';
-const ACAO_FINALIZAR_PREFIX = 'acao_finalizar_';
-const PAINEL_ACOES_CANAL_ID = process.env.PAINEL_ACOES_CANAL_ID || '1487176112860696686';
-const CANAL_LOG_ACOES_ID = process.env.CANAL_LOG_ACOES_ID || '1487176260437409863';
-
-// Edite esta estrutura para cadastrar as ações disponíveis em cada categoria.
-const ACOES_DISPONIVEIS = {
-  pequena: [
-    'Aeroporto Trevor',
-    'Ammunation Porto',
-    'Ammunation Praça',
-    'Antena',
-    'Auditório',
-    'Bebidas Samir',
-    'Campo de Golf',
-    'Comedy',
-    'Estábulo',
-    'Fast Food',
-    'Hiper Mercado',
-    'Igreja',
-    'Lanchonete - Spitroasters',
-    'Lava Jato',
-    'Lojinha Banco Central',
-    'Lojinha China',
-    'Lojinha Grapeseed',
-    'Lojinha Groove',
-    'Lojinha Praia',
-    'Lojinha Prefeitura',
-    'Lojinha Barragem',
-    'Lojinha Sandy',
-    'McDonald\'s',
-    'Navio Porto',
-    'Píer',
-    'Planet'
-  ],
-  media: [
-    'Açougue',
-    'Anfiteatro',
-    'BobCat',
-    'Container',
-    'Estacionamento Marrom',
-    'Fleeca Chaves',
-    'Fleeca Life Invader',
-    'Fleeca Praia',
-    'Fleeca Rota 68',
-    'Fleeca Shopping',
-    'Galinheiro',
-    'Hotel Rosa',
-    'Joalheria',
-    'Mergulhador',
-    'Mazebank',
-    'Pelados',
-    'Prefeitura'
-  ],
-  grande: [
-    'Banco Central',
-    'Banco Paleto',
-    'Madeireira',
-    'Nióbio',
-    'Porto'
-  ]
-};
+const {
+  ACAO_COMANDO_PREFIX,
+  ACAO_ENTRAR_PREFIX,
+  ACAO_FINALIZAR_PREFIX,
+  ACAO_MODAL_PREFIX,
+  ACAO_SAIR_PREFIX,
+  ACAO_SELECT_NOME_PREFIX,
+  ACAO_SELECT_RESULTADO_PREFIX,
+  ACAO_SELECT_TIPO_PREFIX,
+  ACOES_DISPONIVEIS,
+  ACOES_PAINEL_BANNER_URL,
+  ACOES_PAINEL_IMAGE_PATH,
+  CADASTRO_BANNER_URL,
+  CADASTRO_BUTTON_ID,
+  CADASTRO_IMAGE_PATH,
+  CADASTRO_MODAL_ID,
+  CADASTRO_THUMBNAIL_URL,
+  CANAL_APROVACAO_LAVAGEM_ID,
+  CANAL_LOG_ACOES_ID,
+  CANAL_REGISTRO_LAVAGEM_ID,
+  LAVAGEM_APROVAR_PREFIX,
+  LAVAGEM_MODAL_PREFIX,
+  LAVAGEM_RECUSAR_PREFIX,
+  PAINEL_ACOES_CANAL_ID,
+  PAINEL_PRINCIPAL_CANAL_ID,
+  PAINEL_THUMBNAIL_URL
+} = require('./config/constants');
+const repositories = require('./repositories');
+const utils = require('./utils');
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
@@ -116,309 +61,67 @@ const client = new Client({
 ========================= */
 
 async function salvarRegistroBanco(dados) {
-  await db.query(
-    `
-      INSERT INTO registros (
-        tipo,
-        usuario_tag,
-        usuario_id,
-        item,
-        quantidade,
-        imagem,
-        acao,
-        categoria,
-        status,
-        criado_em
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-    `,
-    [
-      dados.tipo,
-      dados.usuarioTag,
-      dados.usuarioId,
-      dados.item || null,
-      dados.quantidade ?? null,
-      dados.imagem || null,
-      dados.acao || null,
-      dados.categoria || null,
-      dados.status || 'pendente',
-      dados.criadoEm
-    ]
-  );
+  return repositories.salvarRegistroBanco(dados);
 }
 
 async function buscarRegistrosFarmPorUsuario(usuarioId) {
-  const result = await db.query(
-    `
-      SELECT *
-      FROM registros
-      WHERE usuario_id = $1
-        AND tipo = 'farm'
-      ORDER BY id DESC
-    `,
-    [usuarioId]
-  );
-
-  return result.rows;
+  return repositories.buscarRegistrosFarmPorUsuario(usuarioId);
 }
 
 async function buscarTotalFarmPorUsuario(usuarioId) {
-  const result = await db.query(
-    `
-      SELECT COALESCE(SUM(quantidade), 0) AS total
-      FROM registros
-      WHERE usuario_id = $1
-        AND tipo = 'farm'
-    `,
-    [usuarioId]
-  );
-
-  return Number(result.rows[0]?.total || 0);
+  return repositories.buscarTotalFarmPorUsuario(usuarioId);
 }
 
 async function buscarUsuariosComFarm() {
-  const result = await db.query(`
-    SELECT DISTINCT usuario_id, usuario_tag
-    FROM registros
-    WHERE tipo = 'farm'
-  `);
-
-  return result.rows;
+  return repositories.buscarUsuariosComFarm();
 }
 
 async function resetarFarmUsuario(usuarioId) {
-  await db.query(
-    `
-      DELETE FROM registros
-      WHERE usuario_id = $1
-        AND tipo = 'farm'
-    `,
-    [usuarioId]
-  );
+  return repositories.resetarFarmUsuario(usuarioId);
 }
 
 async function salvarRelatorioSemanal(usuarioId, usuarioTag, semanaReferencia, totalItens) {
-  await db.query(
-    `
-      INSERT INTO relatorios_semanais (
-        usuario_id,
-        usuario_tag,
-        semana_referencia,
-        total_itens,
-        criado_em
-      ) VALUES ($1,$2,$3,$4,$5)
-    `,
-    [
-      usuarioId,
-      usuarioTag,
-      semanaReferencia,
-      totalItens,
-      new Date()
-    ]
-  );
+  return repositories.salvarRelatorioSemanal(usuarioId, usuarioTag, semanaReferencia, totalItens);
 }
 
 async function buscarRelatoriosUsuario(usuarioId) {
-  const result = await db.query(
-    `
-      SELECT *
-      FROM relatorios_semanais
-      WHERE usuario_id = $1
-      ORDER BY criado_em DESC
-      LIMIT 52
-    `,
-    [usuarioId]
-  );
-
-  return result.rows;
+  return repositories.buscarRelatoriosUsuario(usuarioId);
 }
 
 async function manterUltimos52RelatoriosPorUsuario(usuarioId) {
-  await db.query(
-    `
-      DELETE FROM relatorios_semanais
-      WHERE usuario_id = $1
-        AND id NOT IN (
-          SELECT id
-          FROM relatorios_semanais
-          WHERE usuario_id = $2
-          ORDER BY criado_em DESC
-          LIMIT 52
-        )
-    `,
-    [usuarioId, usuarioId]
-  );
+  return repositories.manterUltimos52RelatoriosPorUsuario(usuarioId);
 }
 
 async function buscarResumoSemanalGlobal() {
-  const result = await db.query(`
-    SELECT usuario_tag, usuario_id, SUM(quantidade) AS total
-    FROM registros
-    WHERE tipo = 'farm'
-    GROUP BY usuario_tag, usuario_id
-    ORDER BY total DESC
-  `);
-
-  return result.rows.map(row => ({
-    usuario_tag: row.usuario_tag,
-    usuario_id: row.usuario_id,
-    total: Number(row.total || 0)
-  }));
+  return repositories.buscarResumoSemanalGlobal();
 }
 
 async function salvarOuAtualizarCadastro(dados) {
-  await db.query(
-    `
-      INSERT INTO cadastros (
-        discord_user_id,
-        discord_tag,
-        guild_id,
-        personagem_nome,
-        personagem_nome_formatado,
-        personagem_id,
-        nickname_aplicado,
-        canal_id,
-        canal_nome,
-        criado_em,
-        atualizado_em
-      )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-      ON CONFLICT (discord_user_id)
-      DO UPDATE SET
-        discord_tag = EXCLUDED.discord_tag,
-        guild_id = EXCLUDED.guild_id,
-        personagem_nome = EXCLUDED.personagem_nome,
-        personagem_nome_formatado = EXCLUDED.personagem_nome_formatado,
-        personagem_id = EXCLUDED.personagem_id,
-        nickname_aplicado = EXCLUDED.nickname_aplicado,
-        canal_id = EXCLUDED.canal_id,
-        canal_nome = EXCLUDED.canal_nome,
-        atualizado_em = EXCLUDED.atualizado_em
-    `,
-    [
-      dados.discordUserId,
-      dados.discordTag,
-      dados.guildId,
-      dados.personagemNome,
-      dados.personagemNomeFormatado,
-      dados.personagemId,
-      dados.nicknameAplicado,
-      dados.canalId,
-      dados.canalNome,
-      dados.criadoEm,
-      dados.atualizadoEm
-    ]
-  );
+  return repositories.salvarOuAtualizarCadastro(dados);
 }
 
 async function buscarCadastroPorUsuario(discordUserId) {
-  const result = await db.query(
-    `
-      SELECT *
-      FROM cadastros
-      WHERE discord_user_id = $1
-      LIMIT 1
-    `,
-    [discordUserId]
-  );
-
-  return result.rows[0] || null;
+  return repositories.buscarCadastroPorUsuario(discordUserId);
 }
 
 async function validarCadastroExistenteUsuario(discordUserId, { permitirEdicao = false } = {}) {
-  const cadastroExistente = await buscarCadastroPorUsuario(discordUserId);
-
-  if (cadastroExistente && !permitirEdicao) {
-    throw new Error(
-      'Você já possui um cadastro ativo. Para alterar seus dados, solicite a um administrador o uso do comando de edição.'
-    );
-  }
-
-  return cadastroExistente;
+  return repositories.validarCadastroExistenteUsuario(discordUserId, { permitirEdicao });
 }
 
 async function buscarCadastroPorPersonagemId(personagemId) {
-  const result = await db.query(
-    `
-      SELECT *
-      FROM cadastros
-      WHERE personagem_id = $1
-      LIMIT 1
-    `,
-    [personagemId]
-  );
-
-  return result.rows[0] || null;
+  return repositories.buscarCadastroPorPersonagemId(personagemId);
 }
 
 async function salvarAcao(dados) {
-  const result = await db.query(
-    `
-      INSERT INTO acoes (
-        tamanho,
-        nome_acao,
-        comando_texto,
-        quantidade_participantes,
-        tipo_acao,
-        resultado,
-        dinheiro,
-        criador_id,
-        criador_tag,
-        canal_id,
-        mensagem_id,
-        status,
-        iniciado_em,
-        finalizado_em
-      )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
-      RETURNING *
-    `,
-    [
-      dados.tamanho,
-      dados.nomeAcao || null,
-      dados.comandoTexto,
-      dados.quantidadeParticipantes,
-      dados.tipoAcao || null,
-      dados.resultado || null,
-      dados.dinheiro,
-      dados.criadorId,
-      dados.criadorTag,
-      dados.canalId,
-      dados.mensagemId || null,
-      dados.status || 'em_andamento',
-      dados.iniciadoEm,
-      dados.finalizadoEm || null
-    ]
-  );
-
-  return result.rows[0];
+  return repositories.salvarAcao(dados);
 }
 
 async function atualizarMensagemAcao(acaoId, mensagemId) {
-  const result = await db.query(
-    `
-      UPDATE acoes
-      SET mensagem_id = $1
-      WHERE id = $2
-      RETURNING *
-    `,
-    [mensagemId, acaoId]
-  );
-
-  return result.rows[0] || null;
+  return repositories.atualizarMensagemAcao(acaoId, mensagemId);
 }
 
 async function buscarAcaoPorId(acaoId) {
-  const result = await db.query(
-    `
-      SELECT *
-      FROM acoes
-      WHERE id = $1
-      LIMIT 1
-    `,
-    [acaoId]
-  );
-
-  return result.rows[0] || null;
+  return repositories.buscarAcaoPorId(acaoId);
 }
 
 async function atualizarCampoAcao(acaoId, campo, valor) {
@@ -675,30 +378,19 @@ async function recusarLavagem(lavagemId, recusador) {
 }
 
 function normalizarEspacos(texto) {
-  return texto.replace(/\s+/g, ' ').trim();
+  return utils.normalizarEspacos(texto);
 }
 
 function capitalizarNomePersonagem(nome) {
-  return normalizarEspacos(nome)
-    .split(' ')
-    .filter(Boolean)
-    .map(parte => parte.charAt(0).toUpperCase() + parte.slice(1).toLowerCase())
-    .join(' ');
+  return utils.capitalizarNomePersonagem(nome);
 }
 
 function sanitizarNomeCanal(nome) {
-  return nome
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
+  return utils.sanitizarNomeCanal(nome);
 }
 
 function gerarNomeCanalCadastro(nomeFormatado, personagemId) {
-  return `${sanitizarNomeCanal(nomeFormatado)}-${personagemId}`.slice(0, 100);
+  return utils.gerarNomeCanalCadastro(nomeFormatado, personagemId);
 }
 
 async function validarPersonagemIdDisponivel(personagemId, discordUserId) {
@@ -712,27 +404,11 @@ async function validarPersonagemIdDisponivel(personagemId, discordUserId) {
 }
 
 function formatarMoeda(valor) {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(Number(valor || 0));
+  return utils.formatarMoeda(valor);
 }
 
 function normalizarTextoComandoAcao(texto) {
-  const valor = normalizarEspacos(texto);
-  const mencao = valor.match(/^<@!?(\d+)>$/);
-
-  if (mencao) {
-    return `<@${mencao[1]}>`;
-  }
-
-  if (/^\d+$/.test(valor)) {
-    return `<@${valor}>`;
-  }
-
-  return valor;
+  return utils.normalizarTextoComandoAcao(texto);
 }
 
 function possuiExtensaoImagem(url) {
