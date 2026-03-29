@@ -56,6 +56,15 @@ const client = new Client({
   partials: [Partials.GuildMember, Partials.User]
 });
 
+const ACAO_RASCUNHO_NOME_PREFIX = 'acao_rascunho_nome_';
+const ACAO_RASCUNHO_TIPO_PREFIX = 'acao_rascunho_tipo_';
+const ACAO_RASCUNHO_DETALHES_PREFIX = 'acao_rascunho_detalhes_';
+const ACAO_RASCUNHO_CONFIRMAR_PREFIX = 'acao_rascunho_confirmar_';
+const ACAO_RASCUNHO_MODAL_PREFIX = 'modal_rascunho_acao_';
+const ACAO_RASCUNHO_TTL_MS = 30 * 60 * 1000;
+const TIPOS_ACAO = ['Tiro', 'Fuga', 'Arma Branca'];
+const rascunhosAcao = new Map();
+
 /* =========================
    FUNÇÕES DO BANCO
 ========================= */
@@ -505,6 +514,170 @@ function obterLabelTamanhoAcao(tamanho) {
   return 'Ação Grande';
 }
 
+function criarTokenRascunhoAcao(userId) {
+  return `${userId}_${Date.now().toString(36)}`;
+}
+
+function limparRascunhosAcaoExpirados() {
+  const agora = Date.now();
+
+  for (const [token, rascunho] of rascunhosAcao.entries()) {
+    if ((agora - rascunho.criadoEmMs) > ACAO_RASCUNHO_TTL_MS) {
+      rascunhosAcao.delete(token);
+    }
+  }
+}
+
+function obterRascunhoAcao(token, userId) {
+  limparRascunhosAcaoExpirados();
+
+  const rascunho = rascunhosAcao.get(token);
+
+  if (!rascunho || rascunho.userId !== userId) {
+    return null;
+  }
+
+  return rascunho;
+}
+
+function criarRascunhoAcao(userId, channelId, tamanho) {
+  limparRascunhosAcaoExpirados();
+
+  const token = criarTokenRascunhoAcao(userId);
+  const rascunho = {
+    token,
+    userId,
+    channelId,
+    tamanho,
+    nomeAcao: null,
+    tipoAcao: null,
+    quantidadeParticipantes: null,
+    dinheiro: null,
+    criadoEmMs: Date.now()
+  };
+
+  rascunhosAcao.set(token, rascunho);
+
+  return rascunho;
+}
+
+function rascunhoAcaoEstaPronto(rascunho) {
+  return Boolean(
+    rascunho?.nomeAcao &&
+    rascunho?.tipoAcao &&
+    Number.isInteger(rascunho?.quantidadeParticipantes) &&
+    rascunho.quantidadeParticipantes > 0 &&
+    Number.isInteger(rascunho?.dinheiro) &&
+    rascunho.dinheiro > 0
+  );
+}
+
+function criarEmbedRascunhoAcao(rascunho) {
+  return new EmbedBuilder()
+    .setColor(0x2f3136)
+    .setTitle(`Configurar ${obterLabelTamanhoAcao(rascunho.tamanho)}`)
+    .setDescription([
+      'Defina os dados da ação antes de criar o embed definitivo.',
+      '',
+      `**Ação:** ${rascunho.nomeAcao || 'Não selecionada'}`,
+      `**Tipo:** ${rascunho.tipoAcao || 'Não selecionado'}`,
+      `**Qtd. Participantes:** ${rascunho.quantidadeParticipantes ?? 'Não informado'}`,
+      `**Dinheiro:** ${rascunho.dinheiro ? formatarMoeda(rascunho.dinheiro) : 'Não informado'}`,
+      '',
+      rascunhoAcaoEstaPronto(rascunho)
+        ? 'Tudo pronto. Clique em "Criar Ação".'
+        : 'Selecione a ação, o tipo e informe os detalhes para continuar.'
+    ].join('\n'))
+    .setFooter({ text: `Rascunho ${obterLabelTamanhoAcao(rascunho.tamanho)}` });
+}
+
+function criarSelectRascunhoAcoes(token, tamanho, valorAtual = null) {
+  const opcoes = (ACOES_DISPONIVEIS[tamanho] || []).slice(0, 25).map(acao => ({
+    label: acao.slice(0, 100),
+    value: acao,
+    default: acao === valorAtual
+  }));
+
+  return new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(`${ACAO_RASCUNHO_NOME_PREFIX}${token}`)
+      .setPlaceholder('Escolha a ação')
+      .addOptions(opcoes.length ? opcoes : [{ label: 'Cadastre ações em ACOES_DISPONIVEIS', value: 'indisponivel' }])
+      .setDisabled(opcoes.length === 0)
+  );
+}
+
+function criarSelectRascunhoTipo(token, valorAtual = null) {
+  return new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(`${ACAO_RASCUNHO_TIPO_PREFIX}${token}`)
+      .setPlaceholder('Escolha o tipo da ação')
+      .addOptions(
+        ...TIPOS_ACAO.map(tipo => ({
+          label: tipo,
+          value: tipo,
+          default: tipo === valorAtual
+        }))
+      )
+  );
+}
+
+function criarBotoesRascunhoAcao(token, pronto = false) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`${ACAO_RASCUNHO_DETALHES_PREFIX}${token}`)
+      .setLabel('Informar Quantidade e Dinheiro')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(`${ACAO_RASCUNHO_CONFIRMAR_PREFIX}${token}`)
+      .setLabel('Criar Ação')
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(!pronto)
+  );
+}
+
+function montarPayloadRascunhoAcao(rascunho) {
+  return {
+    embeds: [criarEmbedRascunhoAcao(rascunho)],
+    components: [
+      criarSelectRascunhoAcoes(rascunho.token, rascunho.tamanho, rascunho.nomeAcao),
+      criarSelectRascunhoTipo(rascunho.token, rascunho.tipoAcao),
+      criarBotoesRascunhoAcao(rascunho.token, rascunhoAcaoEstaPronto(rascunho))
+    ]
+  };
+}
+
+function criarModalDetalhesRascunhoAcao(token, rascunho) {
+  const modal = new ModalBuilder()
+    .setCustomId(`${ACAO_RASCUNHO_MODAL_PREFIX}${token}`)
+    .setTitle(`Detalhes • ${obterLabelTamanhoAcao(rascunho.tamanho)}`);
+
+  const quantidadeInput = new TextInputBuilder()
+    .setCustomId('quantidade_participantes')
+    .setLabel('Quantidade de participantes')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setValue(rascunho.quantidadeParticipantes ? String(rascunho.quantidadeParticipantes) : '')
+    .setMaxLength(3)
+    .setPlaceholder('Ex.: 8');
+
+  const dinheiroInput = new TextInputBuilder()
+    .setCustomId('dinheiro')
+    .setLabel('Dinheiro')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setValue(rascunho.dinheiro ? String(rascunho.dinheiro) : '')
+    .setMaxLength(12)
+    .setPlaceholder('Ex.: 1125000');
+
+  modal.addComponents(
+    new ActionRowBuilder().addComponents(quantidadeInput),
+    new ActionRowBuilder().addComponents(dinheiroInput)
+  );
+
+  return modal;
+}
+
 function criarModalAcao(tamanho) {
   const modal = new ModalBuilder()
     .setCustomId(`${ACAO_MODAL_PREFIX}${tamanho}`)
@@ -761,8 +934,6 @@ async function renderizarMensagemAcao(interactionOrChannel, acaoId, desabilitado
   const payload = {
     embeds: [criarEmbedAcao(acao, participantes)],
     components: [
-      criarSelectAcoesDisponiveis(acaoId, acao.tamanho, desabilitado),
-      criarSelectTipoAcao(acaoId, desabilitado),
       criarSelectResultadoAcao(acaoId, desabilitado),
       criarBotoesAcao(acaoId, desabilitado)
     ]
@@ -2036,16 +2207,42 @@ client.on('interactionCreate', async interaction => {
         return processarModalLavagem(interaction, 'pista');
       }
 
-      if (interaction.customId === `${ACAO_MODAL_PREFIX}pequena`) {
-        return processarModalAcao(interaction, 'pequena');
-      }
+      if (interaction.customId.startsWith(ACAO_RASCUNHO_MODAL_PREFIX)) {
+        const token = interaction.customId.slice(ACAO_RASCUNHO_MODAL_PREFIX.length);
+        const rascunho = obterRascunhoAcao(token, interaction.user.id);
 
-      if (interaction.customId === `${ACAO_MODAL_PREFIX}media`) {
-        return processarModalAcao(interaction, 'media');
-      }
+        if (!rascunho) {
+          return interaction.reply({
+            content: 'Esse rascunho de ação expirou ou não pertence a você.',
+            ephemeral: true
+          });
+        }
 
-      if (interaction.customId === `${ACAO_MODAL_PREFIX}grande`) {
-        return processarModalAcao(interaction, 'grande');
+        const quantidadeParticipantesTexto = interaction.fields.getTextInputValue('quantidade_participantes').trim();
+        const dinheiroTexto = interaction.fields.getTextInputValue('dinheiro').trim();
+
+        if (!/^\d+$/.test(quantidadeParticipantesTexto) || Number(quantidadeParticipantesTexto) <= 0) {
+          return interaction.reply({
+            content: 'A quantidade de participantes deve ser um número inteiro maior que zero.',
+            ephemeral: true
+          });
+        }
+
+        if (!/^\d+$/.test(dinheiroTexto) || Number(dinheiroTexto) <= 0) {
+          return interaction.reply({
+            content: 'O valor em dinheiro deve ser um número inteiro maior que zero.',
+            ephemeral: true
+          });
+        }
+
+        rascunho.quantidadeParticipantes = Number(quantidadeParticipantesTexto);
+        rascunho.dinheiro = Number(dinheiroTexto);
+
+        return interaction.reply({
+          content: 'Detalhes atualizados. Use o painel abaixo para concluir a criação da ação.',
+          ephemeral: true,
+          ...montarPayloadRascunhoAcao(rascunho)
+        });
       }
     }
 
@@ -2055,15 +2252,24 @@ client.on('interactionCreate', async interaction => {
       }
 
       if (interaction.customId === 'acao_pequena') {
-        return interaction.showModal(criarModalAcao('pequena'));
+        return interaction.reply({
+          ephemeral: true,
+          ...montarPayloadRascunhoAcao(criarRascunhoAcao(interaction.user.id, interaction.channelId, 'pequena'))
+        });
       }
 
       if (interaction.customId === 'acao_media') {
-        return interaction.showModal(criarModalAcao('media'));
+        return interaction.reply({
+          ephemeral: true,
+          ...montarPayloadRascunhoAcao(criarRascunhoAcao(interaction.user.id, interaction.channelId, 'media'))
+        });
       }
 
       if (interaction.customId === 'acao_grande') {
-        return interaction.showModal(criarModalAcao('grande'));
+        return interaction.reply({
+          ephemeral: true,
+          ...montarPayloadRascunhoAcao(criarRascunhoAcao(interaction.user.id, interaction.channelId, 'grande'))
+        });
       }
 
       if (interaction.customId === 'lavagem_parceria') {
@@ -2118,6 +2324,65 @@ client.on('interactionCreate', async interaction => {
       if (interaction.customId.startsWith(ACAO_FINALIZAR_PREFIX)) {
         const acaoId = Number(interaction.customId.slice(ACAO_FINALIZAR_PREFIX.length));
         return finalizarAcao(interaction, acaoId);
+      }
+
+      if (interaction.customId.startsWith(ACAO_RASCUNHO_DETALHES_PREFIX)) {
+        const token = interaction.customId.slice(ACAO_RASCUNHO_DETALHES_PREFIX.length);
+        const rascunho = obterRascunhoAcao(token, interaction.user.id);
+
+        if (!rascunho) {
+          return interaction.reply({
+            content: 'Esse rascunho de ação expirou ou não pertence a você.',
+            ephemeral: true
+          });
+        }
+
+        return interaction.showModal(criarModalDetalhesRascunhoAcao(token, rascunho));
+      }
+
+      if (interaction.customId.startsWith(ACAO_RASCUNHO_CONFIRMAR_PREFIX)) {
+        const token = interaction.customId.slice(ACAO_RASCUNHO_CONFIRMAR_PREFIX.length);
+        const rascunho = obterRascunhoAcao(token, interaction.user.id);
+
+        if (!rascunho) {
+          return interaction.reply({
+            content: 'Esse rascunho de ação expirou ou não pertence a você.',
+            ephemeral: true
+          });
+        }
+
+        if (!rascunhoAcaoEstaPronto(rascunho)) {
+          return interaction.reply({
+            content: 'Defina a ação, o tipo, a quantidade de participantes e o dinheiro antes de criar.',
+            ephemeral: true
+          });
+        }
+
+        const acao = await salvarAcao({
+          tamanho: rascunho.tamanho,
+          nomeAcao: rascunho.nomeAcao,
+          comandoTexto: null,
+          quantidadeParticipantes: rascunho.quantidadeParticipantes,
+          tipoAcao: rascunho.tipoAcao,
+          resultado: null,
+          dinheiro: rascunho.dinheiro,
+          criadorId: interaction.user.id,
+          criadorTag: interaction.user.tag,
+          canalId: interaction.channelId,
+          mensagemId: null,
+          status: 'em_andamento',
+          iniciadoEm: new Date(),
+          finalizadoEm: null
+        });
+
+        const mensagem = await renderizarMensagemAcao(interaction, acao.id);
+        rascunhosAcao.delete(token);
+
+        return interaction.update({
+          content: `Ação criada com sucesso em ${mensagem ? `<#${interaction.channelId}>` : 'este canal'}.`,
+          embeds: [],
+          components: []
+        });
       }
 
       if (interaction.customId === 'farm' || interaction.customId === 'painel_farm') {
@@ -2176,32 +2441,45 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (interaction.isStringSelectMenu()) {
-      if (interaction.customId.startsWith(ACAO_SELECT_NOME_PREFIX)) {
-        const acaoId = Number(interaction.customId.slice(ACAO_SELECT_NOME_PREFIX.length));
+      if (interaction.customId.startsWith(ACAO_RASCUNHO_NOME_PREFIX)) {
+        const token = interaction.customId.slice(ACAO_RASCUNHO_NOME_PREFIX.length);
+        const rascunho = obterRascunhoAcao(token, interaction.user.id);
         const nomeAcao = interaction.values[0];
 
-        if (nomeAcao !== 'indisponivel') {
-          await atualizarCampoAcao(acaoId, 'nome_acao', nomeAcao);
-          await renderizarMensagemAcao(interaction, acaoId);
+        if (!rascunho) {
+          return interaction.reply({
+            content: 'Esse rascunho de ação expirou ou não pertence a você.',
+            ephemeral: true
+          });
         }
 
-        return interaction.reply({
-          content: nomeAcao === 'indisponivel'
-            ? 'Cadastre ações em ACOES_DISPONIVEIS antes de usar esta lista.'
-            : `Ação definida como ${nomeAcao}.`,
-          ephemeral: true
-        });
+        if (nomeAcao === 'indisponivel') {
+          return interaction.reply({
+            content: 'Cadastre ações em ACOES_DISPONIVEIS antes de usar esta lista.',
+            ephemeral: true
+          });
+        }
+
+        rascunho.nomeAcao = nomeAcao;
+
+        return interaction.update(montarPayloadRascunhoAcao(rascunho));
       }
 
-      if (interaction.customId.startsWith(ACAO_SELECT_TIPO_PREFIX)) {
-        const acaoId = Number(interaction.customId.slice(ACAO_SELECT_TIPO_PREFIX.length));
+      if (interaction.customId.startsWith(ACAO_RASCUNHO_TIPO_PREFIX)) {
+        const token = interaction.customId.slice(ACAO_RASCUNHO_TIPO_PREFIX.length);
+        const rascunho = obterRascunhoAcao(token, interaction.user.id);
         const tipoAcao = interaction.values[0];
-        await atualizarCampoAcao(acaoId, 'tipo_acao', tipoAcao);
-        await renderizarMensagemAcao(interaction, acaoId);
-        return interaction.reply({
-          content: `Tipo da ação definido como ${tipoAcao}.`,
-          ephemeral: true
-        });
+
+        if (!rascunho) {
+          return interaction.reply({
+            content: 'Esse rascunho de ação expirou ou não pertence a você.',
+            ephemeral: true
+          });
+        }
+
+        rascunho.tipoAcao = tipoAcao;
+
+        return interaction.update(montarPayloadRascunhoAcao(rascunho));
       }
 
       if (interaction.customId.startsWith(ACAO_SELECT_RESULTADO_PREFIX)) {
