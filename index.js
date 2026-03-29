@@ -735,6 +735,94 @@ function normalizarTextoComandoAcao(texto) {
   return valor;
 }
 
+function possuiExtensaoImagem(url) {
+  return /\.(png|jpe?g|gif|webp|bmp|svg)(?:\?.*)?$/i.test(url);
+}
+
+function extrairImagemHtml(html, urlBase) {
+  const expressoes = [
+    /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
+    /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i
+  ];
+
+  for (const expressao of expressoes) {
+    const correspondencia = html.match(expressao);
+
+    if (correspondencia?.[1]) {
+      return new URL(correspondencia[1], urlBase).toString();
+    }
+  }
+
+  return null;
+}
+
+async function resolverUrlImagem(urlInformada) {
+  if (!urlInformada) {
+    return null;
+  }
+
+  let url;
+
+  try {
+    url = new URL(urlInformada);
+  } catch {
+    return null;
+  }
+
+  if (possuiExtensaoImagem(url.toString())) {
+    return url.toString();
+  }
+
+  if (url.hostname === 'postimg.cc') {
+    const partes = url.pathname.split('/').filter(Boolean);
+
+    if (partes.length >= 2) {
+      return `https://i.postimg.cc/${partes[0]}/${partes[1]}`;
+    }
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const resposta = await fetch(url.toString(), {
+      signal: controller.signal,
+      redirect: 'follow',
+      headers: {
+        'user-agent': 'Mozilla/5.0 VSYNC-Bot'
+      }
+    });
+
+    if (!resposta.ok) {
+      return url.toString();
+    }
+
+    const contentType = resposta.headers.get('content-type') || '';
+
+    if (contentType.startsWith('image/')) {
+      return resposta.url;
+    }
+
+    if (contentType.includes('text/html')) {
+      const html = await resposta.text();
+      const imagemExtraida = extrairImagemHtml(html, resposta.url);
+
+      if (imagemExtraida) {
+        return imagemExtraida;
+      }
+    }
+
+    return url.toString();
+  } catch (error) {
+    console.error(`[resolverUrlImagem] Não foi possível resolver a URL ${urlInformada}:`, error);
+    return url.toString();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function obterLabelTamanhoAcao(tamanho) {
   if (tamanho === 'pequena') return 'Ação Pequena';
   if (tamanho === 'media') return 'Ação Média';
@@ -1868,17 +1956,6 @@ async function publicarOuAtualizarPainelPrincipal() {
   });
 }
 
-async function startBot() {
-  try {
-    await testarConexaoBanco();
-    await initDatabase();
-    await client.login(process.env.DISCORD_TOKEN);
-  } catch (error) {
-    console.error('Erro ao iniciar o bot:', error);
-    process.exit(1);
-  }
-}
-
 /* =========================
    BOT READY
 ========================= */
@@ -2143,17 +2220,22 @@ client.on('interactionCreate', async interaction => {
           });
         }
 
+        const imagemEmbed = foto?.url
+          ? foto.url
+          : await resolverUrlImagem(link);
+
         const embed = new EmbedBuilder()
           .setTitle('📦 Novo registro de farm')
           .addFields(
             { name: 'Item', value: item, inline: true },
             { name: 'Quantidade', value: String(quantidade), inline: true },
-            { name: 'Usuário', value: `<@${interaction.user.id}>`, inline: false }
+            { name: 'Usuário', value: `<@${interaction.user.id}>`, inline: false },
+            { name: 'Imagem', value: imagem, inline: false }
           )
           .setTimestamp();
 
-        if (imagem) {
-          embed.setImage(imagem);
+        if (imagemEmbed) {
+          embed.setImage(imagemEmbed);
         }
 
         await canal.send({ embeds: [embed] });

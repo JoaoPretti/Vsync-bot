@@ -1,5 +1,70 @@
 const db = require('./db');
 
+async function criarIndice(nome, sql) {
+  console.log(`INIT IDX - garantindo índice ${nome}`);
+  await db.query(sql);
+}
+
+async function possuiViolacoes(sql) {
+  const result = await db.query(sql);
+  return Number(result.rows[0]?.total || 0) > 0;
+}
+
+async function constraintExiste(nome) {
+  const result = await db.query(
+    `
+      SELECT 1
+      FROM pg_constraint
+      WHERE conname = $1
+      LIMIT 1
+    `,
+    [nome]
+  );
+
+  return Boolean(result.rows[0]);
+}
+
+async function criarCheckConstraintSePossivel({ nome, alterTableSql, validacaoSql, aviso }) {
+  if (await constraintExiste(nome)) {
+    console.log(`INIT CHECK - constraint ${nome} já existe`);
+    return;
+  }
+
+  if (await possuiViolacoes(validacaoSql)) {
+    console.warn(`INIT CHECK - constraint ${nome} não aplicada: ${aviso}`);
+    return;
+  }
+
+  console.log(`INIT CHECK - criando constraint ${nome}`);
+  await db.query(alterTableSql);
+}
+
+async function criarIndiceUnicoSePossivel({ nome, createIndexSql, validacaoSql, aviso }) {
+  const indiceExiste = await db.query(
+    `
+      SELECT 1
+      FROM pg_indexes
+      WHERE schemaname = 'public'
+        AND indexname = $1
+      LIMIT 1
+    `,
+    [nome]
+  );
+
+  if (indiceExiste.rows[0]) {
+    console.log(`INIT UNIQUE - índice ${nome} já existe`);
+    return;
+  }
+
+  if (await possuiViolacoes(validacaoSql)) {
+    console.warn(`INIT UNIQUE - índice ${nome} não aplicado: ${aviso}`);
+    return;
+  }
+
+  console.log(`INIT UNIQUE - criando índice ${nome}`);
+  await db.query(createIndexSql);
+}
+
 async function initDatabase() {
   console.log('INIT 1 - criando tabela registros');
   await db.query(`
@@ -99,6 +164,108 @@ async function initDatabase() {
     ALTER TABLE acoes
     ALTER COLUMN comando_texto DROP NOT NULL
   `);
+
+  console.log('INIT 5.1 - aplicando hardening de constraints e índices');
+  await criarIndice(
+    'idx_registros_usuario_tipo_criado_em',
+    `
+      CREATE INDEX IF NOT EXISTS idx_registros_usuario_tipo_criado_em
+      ON registros (usuario_id, tipo, criado_em DESC)
+    `
+  );
+  await criarIndice(
+    'idx_relatorios_usuario_semana',
+    `
+      CREATE INDEX IF NOT EXISTS idx_relatorios_usuario_semana
+      ON relatorios_semanais (usuario_id, semana_referencia)
+    `
+  );
+  await criarIndice(
+    'idx_lavagens_usuario_status',
+    `
+      CREATE INDEX IF NOT EXISTS idx_lavagens_usuario_status
+      ON lavagens (usuario_id, status, criado_em DESC)
+    `
+  );
+  await criarIndice(
+    'idx_acoes_status_iniciado_em',
+    `
+      CREATE INDEX IF NOT EXISTS idx_acoes_status_iniciado_em
+      ON acoes (status, iniciado_em DESC)
+    `
+  );
+  await criarIndiceUnicoSePossivel({
+    nome: 'ux_cadastros_personagem_id',
+    createIndexSql: `
+      CREATE UNIQUE INDEX IF NOT EXISTS ux_cadastros_personagem_id
+      ON cadastros (personagem_id)
+    `,
+    validacaoSql: `
+      SELECT COUNT(*) AS total
+      FROM (
+        SELECT personagem_id
+        FROM cadastros
+        WHERE personagem_id IS NOT NULL
+        GROUP BY personagem_id
+        HAVING COUNT(*) > 1
+      ) duplicados
+    `,
+    aviso: 'existem personagem_id duplicados em cadastros'
+  });
+  await criarCheckConstraintSePossivel({
+    nome: 'chk_registros_quantidade_positiva',
+    alterTableSql: `
+      ALTER TABLE registros
+      ADD CONSTRAINT chk_registros_quantidade_positiva
+      CHECK (quantidade IS NULL OR quantidade > 0)
+    `,
+    validacaoSql: `
+      SELECT COUNT(*) AS total
+      FROM registros
+      WHERE quantidade IS NOT NULL
+        AND quantidade <= 0
+    `,
+    aviso: 'existem registros com quantidade menor ou igual a zero'
+  });
+  await criarCheckConstraintSePossivel({
+    nome: 'chk_lavagens_valores_positivos',
+    alterTableSql: `
+      ALTER TABLE lavagens
+      ADD CONSTRAINT chk_lavagens_valores_positivos
+      CHECK (
+        quantidade > 0
+        AND taxa_percentual >= 0
+        AND taxa_percentual <= 100
+        AND valor_faccao >= 0
+        AND valor_cliente >= 0
+      )
+    `,
+    validacaoSql: `
+      SELECT COUNT(*) AS total
+      FROM lavagens
+      WHERE quantidade <= 0
+         OR taxa_percentual < 0
+         OR taxa_percentual > 100
+         OR valor_faccao < 0
+         OR valor_cliente < 0
+    `,
+    aviso: 'existem lavagens com quantidade, taxa ou valores inválidos'
+  });
+  await criarCheckConstraintSePossivel({
+    nome: 'chk_acoes_valores_positivos',
+    alterTableSql: `
+      ALTER TABLE acoes
+      ADD CONSTRAINT chk_acoes_valores_positivos
+      CHECK (quantidade_participantes > 0 AND dinheiro > 0)
+    `,
+    validacaoSql: `
+      SELECT COUNT(*) AS total
+      FROM acoes
+      WHERE quantidade_participantes <= 0
+         OR dinheiro <= 0
+    `,
+    aviso: 'existem ações com quantidade_participantes ou dinheiro inválidos'
+  });
 
   console.log('INIT 6 - criando tabela acao_participantes');
   await db.query(`
