@@ -324,6 +324,18 @@ async function buscarCadastroPorUsuario(discordUserId) {
   return result.rows[0] || null;
 }
 
+async function validarCadastroExistenteUsuario(discordUserId, { permitirEdicao = false } = {}) {
+  const cadastroExistente = await buscarCadastroPorUsuario(discordUserId);
+
+  if (cadastroExistente && !permitirEdicao) {
+    throw new Error(
+      'Você já possui um cadastro ativo. Para alterar seus dados, solicite a um administrador o uso do comando de edição.'
+    );
+  }
+
+  return cadastroExistente;
+}
+
 async function buscarCadastroPorPersonagemId(personagemId) {
   const result = await db.query(
     `
@@ -1614,7 +1626,8 @@ async function criarOuAtualizarCanalCadastro(guild, membro, nomeFormatado, perso
   return guild.channels.create(canalCreateData);
 }
 
-async function aplicarCadastroUsuario(guild, user, nomeBruto, personagemId) {
+async function aplicarCadastroUsuario(guild, user, nomeBruto, personagemId, opcoes = {}) {
+  const { permitirEdicao = false } = opcoes;
   const nomeFormatado = capitalizarNomePersonagem(nomeBruto);
 
   if (!nomeFormatado || nomeFormatado.length < 3) {
@@ -1624,6 +1637,8 @@ async function aplicarCadastroUsuario(guild, user, nomeBruto, personagemId) {
   if (!/^\d+$/.test(personagemId)) {
     throw new Error('O ID do personagem deve conter apenas números.');
   }
+
+  await validarCadastroExistenteUsuario(user.id, { permitirEdicao });
 
   const conflitoCadastro = await validarPersonagemIdDisponivel(personagemId, user.id);
 
@@ -1687,7 +1702,8 @@ async function processarCadastro(interaction) {
       interaction.guild,
       interaction.user,
       nomeBruto,
-      personagemId
+      personagemId,
+      { permitirEdicao: false }
     );
   } catch (error) {
     return interaction.editReply({
@@ -1994,7 +2010,8 @@ client.on('interactionCreate', async interaction => {
             interaction.guild,
             usuario,
             nomeBruto,
-            personagemId
+            personagemId,
+            { permitirEdicao: true }
           );
         } catch (error) {
           return interaction.editReply({
@@ -2023,7 +2040,28 @@ client.on('interactionCreate', async interaction => {
         const link = interaction.options.getString('link');
         const cadastroUsuario = await buscarCadastroPorUsuario(interaction.user.id);
 
+        if (foto && foto.contentType && !foto.contentType.startsWith('image/')) {
+          return interaction.reply({
+            content: 'O arquivo enviado em foto precisa ser uma imagem válida.',
+            ephemeral: true
+          });
+        }
+
+        if (link && !/^https?:\/\//i.test(link)) {
+          return interaction.reply({
+            content: 'O link informado para a imagem precisa começar com http:// ou https://.',
+            ephemeral: true
+          });
+        }
+
         const imagem = foto?.url || link || null;
+
+        if (!imagem) {
+          return interaction.reply({
+            content: 'Envie uma imagem no campo de foto ou informe um link de imagem para registrar o farm.',
+            ephemeral: true
+          });
+        }
 
         const canal = await client.channels.fetch(process.env.CANAL_REGISTROS_ID);
 
