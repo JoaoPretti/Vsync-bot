@@ -1682,6 +1682,32 @@ async function aplicarCadastroUsuario(guild, user, nomeBruto, personagemId, opco
   };
 }
 
+async function enviarMensagemCanalCadastro(
+  canal,
+  usuarioId,
+  nomeFormatado,
+  personagemId,
+  {
+    titulo = 'Cadastro Recebido',
+    descricaoFinal = 'Use este canal para falar com a gerência, tirar dúvidas e acompanhar seu processo.'
+  } = {}
+) {
+  const embedCanal = new EmbedBuilder()
+    .setColor(0x2f3136)
+    .setTitle(titulo)
+    .setDescription([
+      `Bem-vindo, <@${usuarioId}>.`,
+      '',
+      `**Personagem:** ${nomeFormatado}`,
+      `**ID:** ${personagemId}`,
+      '',
+      descricaoFinal
+    ].join('\n'))
+    .setTimestamp();
+
+  await canal.send({ content: `<@${usuarioId}>`, embeds: [embedCanal] });
+}
+
 async function processarCadastro(interaction) {
   if (!interaction.inGuild()) {
     return interaction.reply({
@@ -1711,20 +1737,12 @@ async function processarCadastro(interaction) {
     });
   }
 
-  const embedCanal = new EmbedBuilder()
-    .setColor(0x2f3136)
-    .setTitle('Cadastro Recebido')
-    .setDescription([
-      `Bem-vindo, <@${interaction.user.id}>.`,
-      '',
-      `**Personagem:** ${resultadoCadastro.nomeFormatado}`,
-      `**ID:** ${resultadoCadastro.personagemId}`,
-      '',
-      'Use este canal para falar com a gerência, tirar dúvidas e acompanhar seu processo.'
-    ].join('\n'))
-    .setTimestamp();
-
-  await resultadoCadastro.canal.send({ content: `<@${interaction.user.id}>`, embeds: [embedCanal] });
+  await enviarMensagemCanalCadastro(
+    resultadoCadastro.canal,
+    interaction.user.id,
+    resultadoCadastro.nomeFormatado,
+    resultadoCadastro.personagemId
+  );
 
   return interaction.editReply({
     content: `Cadastro concluído com sucesso. Seu canal foi criado em <#${resultadoCadastro.canal.id}>.`
@@ -1933,6 +1951,48 @@ client.on('guildMemberRemove', async member => {
     }
   } catch (error) {
     console.error(`[guildMemberRemove] Erro ao processar saída de ${member.user.tag} (${member.id}):`, error);
+  }
+});
+
+client.on('guildMemberAdd', async member => {
+  try {
+    console.log(`[guildMemberAdd] Entrada detectada: ${member.user.tag} (${member.id})`);
+
+    const cadastroUsuario = await buscarCadastroPorUsuario(member.id);
+
+    if (!cadastroUsuario) {
+      console.log(`[guildMemberAdd] Nenhum cadastro encontrado para ${member.user.tag} (${member.id}).`);
+      return;
+    }
+
+    console.log(
+      `[guildMemberAdd] Cadastro encontrado para ${member.user.tag} (${member.id}). Reativando canal ${cadastroUsuario.canal_id || 'não informado'}.`
+    );
+
+    const resultadoCadastro = await aplicarCadastroUsuario(
+      member.guild,
+      member.user,
+      cadastroUsuario.personagem_nome || cadastroUsuario.personagem_nome_formatado,
+      String(cadastroUsuario.personagem_id),
+      { permitirEdicao: true }
+    );
+
+    await enviarMensagemCanalCadastro(
+      resultadoCadastro.canal,
+      member.id,
+      resultadoCadastro.nomeFormatado,
+      resultadoCadastro.personagemId,
+      {
+        titulo: 'Cadastro Reativado',
+        descricaoFinal: 'Seu cadastro anterior foi localizado no banco de dados e seu canal privado foi reativado automaticamente.'
+      }
+    );
+
+    console.log(
+      `[guildMemberAdd] Cadastro reativado com sucesso para ${member.user.tag} (${member.id}) no canal ${resultadoCadastro.canal.id}.`
+    );
+  } catch (error) {
+    console.error(`[guildMemberAdd] Erro ao reativar cadastro de ${member.user.tag} (${member.id}):`, error);
   }
 });
 
