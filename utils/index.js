@@ -6,7 +6,7 @@ function capitalizarNomePersonagem(nome) {
   return normalizarEspacos(nome)
     .split(' ')
     .filter(Boolean)
-    .map(parte => parte.charAt(0).toUpperCase() + parte.slice(1).toLowerCase())
+    .map((parte) => parte.charAt(0).toUpperCase() + parte.slice(1).toLowerCase())
     .join(' ');
 }
 
@@ -30,7 +30,7 @@ function formatarMoeda(valor) {
     style: 'currency',
     currency: 'BRL',
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2
+    maximumFractionDigits: 2,
   }).format(Number(valor || 0));
 }
 
@@ -58,7 +58,7 @@ function extrairImagemHtml(html, urlBase) {
     /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
     /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i,
     /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i,
-    /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i
+    /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i,
   ];
 
   for (const expressao of expressoes) {
@@ -105,8 +105,8 @@ async function resolverUrlImagem(urlInformada) {
       signal: controller.signal,
       redirect: 'follow',
       headers: {
-        'user-agent': 'Mozilla/5.0 VSYNC-Bot'
-      }
+        'user-agent': 'Mozilla/5.0 VSYNC-Bot',
+      },
     });
 
     if (!resposta.ok) {
@@ -144,5 +144,5 @@ module.exports = {
   normalizarEspacos,
   normalizarTextoComandoAcao,
   resolverUrlImagem,
-  sanitizarNomeCanal
+  sanitizarNomeCanal,
 };

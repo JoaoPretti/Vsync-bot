@@ -44,10 +44,10 @@ const ACOES_DISPONIVEIS = {
     'Lojinha Prefeitura',
     'Lojinha Barragem',
     'Lojinha Sandy',
-    'McDonald\'s',
+    "McDonald's",
     'Navio Porto',
     'Píer',
-    'Planet'
+    'Planet',
   ],
   media: [
     'Açougue',
@@ -66,15 +66,9 @@ const ACOES_DISPONIVEIS = {
     'Mergulhador',
     'Mazebank',
     'Pelados',
-    'Prefeitura'
+    'Prefeitura',
   ],
-  grande: [
-    'Banco Central',
-    'Banco Paleto',
-    'Madeireira',
-    'Nióbio',
-    'Porto'
-  ]
+  grande: ['Banco Central', 'Banco Paleto', 'Madeireira', 'Nióbio', 'Porto'],
 };
 
 module.exports = {
@@ -99,5 +93,5 @@ module.exports = {
   LAVAGEM_RECUSAR_PREFIX,
   PAINEL_ACOES_CANAL_ID,
   PAINEL_PRINCIPAL_CANAL_ID,
-  PAINEL_THUMBNAIL_URL
+  PAINEL_THUMBNAIL_URL,
 };

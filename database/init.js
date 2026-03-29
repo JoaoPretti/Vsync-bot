@@ -210,7 +210,7 @@ async function initDatabase() {
         HAVING COUNT(*) > 1
       ) duplicados
     `,
-    aviso: 'existem personagem_id duplicados em cadastros'
+    aviso: 'existem personagem_id duplicados em cadastros',
   });
   await criarCheckConstraintSePossivel({
     nome: 'chk_registros_quantidade_positiva',
@@ -225,7 +225,7 @@ async function initDatabase() {
       WHERE quantidade IS NOT NULL
         AND quantidade <= 0
     `,
-    aviso: 'existem registros com quantidade menor ou igual a zero'
+    aviso: 'existem registros com quantidade menor ou igual a zero',
   });
   await criarCheckConstraintSePossivel({
     nome: 'chk_lavagens_valores_positivos',
@@ -249,7 +249,7 @@ async function initDatabase() {
          OR valor_faccao < 0
          OR valor_cliente < 0
     `,
-    aviso: 'existem lavagens com quantidade, taxa ou valores inválidos'
+    aviso: 'existem lavagens com quantidade, taxa ou valores inválidos',
   });
   await criarCheckConstraintSePossivel({
     nome: 'chk_acoes_valores_positivos',
@@ -264,7 +264,7 @@ async function initDatabase() {
       WHERE quantidade_participantes <= 0
          OR dinheiro <= 0
     `,
-    aviso: 'existem ações com quantidade_participantes ou dinheiro inválidos'
+    aviso: 'existem ações com quantidade_participantes ou dinheiro inválidos',
   });
 
   console.log('INIT 6 - criando tabela acao_participantes');

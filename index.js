@@ -15,7 +15,7 @@ const {
   TextInputBuilder,
   TextInputStyle,
   PermissionFlagsBits,
-  AttachmentBuilder
+  AttachmentBuilder,
 } = require('discord.js');
 const fs = require('fs');
 
@@ -43,14 +43,14 @@ const {
   LAVAGEM_RECUSAR_PREFIX,
   PAINEL_ACOES_CANAL_ID,
   PAINEL_PRINCIPAL_CANAL_ID,
-  PAINEL_THUMBNAIL_URL
+  PAINEL_THUMBNAIL_URL,
 } = require('./config/constants');
 const repositories = require('./repositories');
 const utils = require('./utils');
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
-  partials: [Partials.GuildMember, Partials.User]
+  partials: [Partials.GuildMember, Partials.User],
 });
 
 const ACAO_RASCUNHO_NOME_PREFIX = 'acao_rascunho_nome_';
@@ -131,7 +131,14 @@ async function buscarAcaoPorId(acaoId) {
 }
 
 async function atualizarCampoAcao(acaoId, campo, valor) {
-  const camposPermitidos = new Set(['nome_acao', 'comando_texto', 'tipo_acao', 'resultado', 'status', 'finalizado_em']);
+  const camposPermitidos = new Set([
+    'nome_acao',
+    'comando_texto',
+    'tipo_acao',
+    'resultado',
+    'status',
+    'finalizado_em',
+  ]);
 
   if (!camposPermitidos.has(campo)) {
     throw new Error('Campo de ação não permitido.');
@@ -227,7 +234,7 @@ async function salvarLavagem(dados) {
       dados.mensagemAprovacaoId || null,
       dados.canalAprovacaoId || null,
       dados.criadoEm,
-      dados.atualizadoEm
+      dados.atualizadoEm,
     ]
   );
 
@@ -279,7 +286,7 @@ async function aprovarLavagem(lavagemId, aprovador) {
   return result.rows[0] || null;
 }
 
-async function removerDadosUsuarioDoBanco(usuarioId) {
+async function _removerDadosUsuarioDoBanco(usuarioId) {
   await db.query('BEGIN');
 
   try {
@@ -322,7 +329,7 @@ async function removerDadosUsuarioDoBanco(usuarioId) {
   }
 }
 
-async function apagarCanalPrivadoCadastro(canalId) {
+async function _apagarCanalPrivadoCadastro(canalId) {
   if (!canalId) {
     return false;
   }
@@ -333,7 +340,7 @@ async function apagarCanalPrivadoCadastro(canalId) {
     return false;
   }
 
-  await canal.delete('Usuário saiu do servidor').catch(error => {
+  await canal.delete('Usuário saiu do servidor').catch((error) => {
     throw error;
   });
 
@@ -354,7 +361,7 @@ async function moverCanalPrivadoParaCategoriaSaida(guild, canalId) {
   }
 
   await canal.edit({
-    parent: categoriaSaidaId
+    parent: categoriaSaidaId,
   });
 
   return true;
@@ -379,7 +386,7 @@ async function recusarLavagem(lavagemId, recusador) {
     ...result.rows[0],
     recusado_por_id: recusador.id,
     recusado_por_tag: recusador.tag,
-    status: 'recusada'
+    status: 'recusada',
   };
 }
 
@@ -391,7 +398,7 @@ function capitalizarNomePersonagem(nome) {
   return utils.capitalizarNomePersonagem(nome);
 }
 
-function sanitizarNomeCanal(nome) {
+function _sanitizarNomeCanal(nome) {
   return utils.sanitizarNomeCanal(nome);
 }
 
@@ -413,7 +420,7 @@ function formatarMoeda(valor) {
   return utils.formatarMoeda(valor);
 }
 
-function normalizarTextoComandoAcao(texto) {
+function _normalizarTextoComandoAcao(texto) {
   return utils.normalizarTextoComandoAcao(texto);
 }
 
@@ -426,7 +433,7 @@ function extrairImagemHtml(html, urlBase) {
     /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
     /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i,
     /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i,
-    /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i
+    /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i,
   ];
 
   for (const expressao of expressoes) {
@@ -473,8 +480,8 @@ async function resolverUrlImagem(urlInformada) {
       signal: controller.signal,
       redirect: 'follow',
       headers: {
-        'user-agent': 'Mozilla/5.0 VSYNC-Bot'
-      }
+        'user-agent': 'Mozilla/5.0 VSYNC-Bot',
+      },
     });
 
     if (!resposta.ok) {
@@ -519,7 +526,7 @@ function limparRascunhosAcaoExpirados() {
   const agora = Date.now();
 
   for (const [token, rascunho] of rascunhosAcao.entries()) {
-    if ((agora - rascunho.criadoEmMs) > ACAO_RASCUNHO_TTL_MS) {
+    if (agora - rascunho.criadoEmMs > ACAO_RASCUNHO_TTL_MS) {
       rascunhosAcao.delete(token);
     }
   }
@@ -550,7 +557,7 @@ function criarRascunhoAcao(userId, channelId, tamanho) {
     tipoAcao: null,
     quantidadeParticipantes: null,
     dinheiro: null,
-    criadoEmMs: Date.now()
+    criadoEmMs: Date.now(),
   };
 
   rascunhosAcao.set(token, rascunho);
@@ -573,33 +580,39 @@ function criarEmbedRascunhoAcao(rascunho) {
   return new EmbedBuilder()
     .setColor(0x2f3136)
     .setTitle(`Configurar ${obterLabelTamanhoAcao(rascunho.tamanho)}`)
-    .setDescription([
-      'Defina os dados da ação antes de criar o embed definitivo.',
-      '',
-      `**Ação:** ${rascunho.nomeAcao || 'Não selecionada'}`,
-      `**Tipo:** ${rascunho.tipoAcao || 'Não selecionado'}`,
-      `**Qtd. Participantes:** ${rascunho.quantidadeParticipantes ?? 'Não informado'}`,
-      `**Dinheiro:** ${rascunho.dinheiro ? formatarMoeda(rascunho.dinheiro) : 'Não informado'}`,
-      '',
-      rascunhoAcaoEstaPronto(rascunho)
-        ? 'Tudo pronto. Clique em "Criar Ação".'
-        : 'Selecione a ação, o tipo e informe os detalhes para continuar.'
-    ].join('\n'))
+    .setDescription(
+      [
+        'Defina os dados da ação antes de criar o embed definitivo.',
+        '',
+        `**Ação:** ${rascunho.nomeAcao || 'Não selecionada'}`,
+        `**Tipo:** ${rascunho.tipoAcao || 'Não selecionado'}`,
+        `**Qtd. Participantes:** ${rascunho.quantidadeParticipantes ?? 'Não informado'}`,
+        `**Dinheiro:** ${rascunho.dinheiro ? formatarMoeda(rascunho.dinheiro) : 'Não informado'}`,
+        '',
+        rascunhoAcaoEstaPronto(rascunho)
+          ? 'Tudo pronto. Clique em "Criar Ação".'
+          : 'Selecione a ação, o tipo e informe os detalhes para continuar.',
+      ].join('\n')
+    )
     .setFooter({ text: `Rascunho ${obterLabelTamanhoAcao(rascunho.tamanho)}` });
 }
 
 function criarSelectRascunhoAcoes(token, tamanho, valorAtual = null) {
-  const opcoes = (ACOES_DISPONIVEIS[tamanho] || []).slice(0, 25).map(acao => ({
+  const opcoes = (ACOES_DISPONIVEIS[tamanho] || []).slice(0, 25).map((acao) => ({
     label: acao.slice(0, 100),
     value: acao,
-    default: acao === valorAtual
+    default: acao === valorAtual,
   }));
 
   return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId(`${ACAO_RASCUNHO_NOME_PREFIX}${token}`)
       .setPlaceholder('Escolha a ação')
-      .addOptions(opcoes.length ? opcoes : [{ label: 'Cadastre ações em ACOES_DISPONIVEIS', value: 'indisponivel' }])
+      .addOptions(
+        opcoes.length
+          ? opcoes
+          : [{ label: 'Cadastre ações em ACOES_DISPONIVEIS', value: 'indisponivel' }]
+      )
       .setDisabled(opcoes.length === 0)
   );
 }
@@ -610,10 +623,10 @@ function criarSelectRascunhoTipo(token, valorAtual = null) {
       .setCustomId(`${ACAO_RASCUNHO_TIPO_PREFIX}${token}`)
       .setPlaceholder('Escolha o tipo da ação')
       .addOptions(
-        ...TIPOS_ACAO.map(tipo => ({
+        ...TIPOS_ACAO.map((tipo) => ({
           label: tipo,
           value: tipo,
-          default: tipo === valorAtual
+          default: tipo === valorAtual,
         }))
       )
   );
@@ -639,8 +652,8 @@ function montarPayloadRascunhoAcao(rascunho) {
     components: [
       criarSelectRascunhoAcoes(rascunho.token, rascunho.tamanho, rascunho.nomeAcao),
       criarSelectRascunhoTipo(rascunho.token, rascunho.tipoAcao),
-      criarBotoesRascunhoAcao(rascunho.token, rascunhoAcaoEstaPronto(rascunho))
-    ]
+      criarBotoesRascunhoAcao(rascunho.token, rascunhoAcaoEstaPronto(rascunho)),
+    ],
   };
 }
 
@@ -688,17 +701,19 @@ function criarPainelAcoes() {
   const embed = new EmbedBuilder()
     .setColor(0x2f3136)
     .setTitle('Criar Relatório de Ação')
-    .setDescription([
-      'Este canal é destinado ao **registro de ações blipadas**.',
-      '',
-      '━━━━━━━━━━━━━━━━━━',
-      '• Selecione o tipo de ação realizada no menu abaixo.',
-      '• Informe se a ação é no tiro, fuga ou arma branca.',
-      '• Solicite que todos os membros participantes confirmem sua participação.',
-      '• As informações serão registradas para fins de controle, estatística e histórico.',
-      '',
-      '📌 Utilize este recurso sempre que houver qualquer tipo de ação blipada em andamento.'
-    ].join('\n'))
+    .setDescription(
+      [
+        'Este canal é destinado ao **registro de ações blipadas**.',
+        '',
+        '━━━━━━━━━━━━━━━━━━',
+        '• Selecione o tipo de ação realizada no menu abaixo.',
+        '• Informe se a ação é no tiro, fuga ou arma branca.',
+        '• Solicite que todos os membros participantes confirmem sua participação.',
+        '• As informações serão registradas para fins de controle, estatística e histórico.',
+        '',
+        '📌 Utilize este recurso sempre que houver qualquer tipo de ação blipada em andamento.',
+      ].join('\n')
+    )
     .setThumbnail(CADASTRO_THUMBNAIL_URL)
     .setFooter({ text: 'VSYNC • Painel de Ações' })
     .setTimestamp();
@@ -727,7 +742,7 @@ function criarPainelAcoes() {
 
   return {
     embed,
-    components: [row]
+    components: [row],
   };
 }
 
@@ -746,21 +761,22 @@ async function publicarOuAtualizarPainelAcoes() {
   }
 
   const mensagens = await canal.messages.fetch({ limit: 20 });
-  const mensagemExistente = mensagens.find(message =>
-    message.author.id === client.user.id &&
-    message.embeds.some(embed => embed.title === painel.embed.data.title)
+  const mensagemExistente = mensagens.find(
+    (message) =>
+      message.author.id === client.user.id &&
+      message.embeds.some((embed) => embed.title === painel.embed.data.title)
   );
 
   const payload = {
     embeds: [painel.embed],
     components: painel.components,
-    files: arquivos
+    files: arquivos,
   };
 
   if (mensagemExistente) {
     await mensagemExistente.edit({
       embeds: [painel.embed],
-      components: painel.components
+      components: painel.components,
     });
     return;
   }
@@ -809,25 +825,27 @@ function criarBotoesAcao(acaoId, desabilitado = false) {
 
 function criarEmbedAcao(acao, participantes) {
   const listaParticipantes = participantes.length
-    ? participantes.map(participante => `<@${participante.usuario_id}>`).join('\n')
+    ? participantes.map((participante) => `<@${participante.usuario_id}>`).join('\n')
     : 'Nenhum participante confirmado ainda.';
 
   return new EmbedBuilder()
     .setColor(0x2f3136)
     .setTitle(acao.nome_acao || `${obterLabelTamanhoAcao(acao.tamanho)} em andamento`)
-    .setDescription([
-      `**Comando da ação:** ${acao.comando_texto || 'Ninguém assumiu o comando ainda'}`,
-      `**Ação iniciada:** <t:${Math.floor(new Date(acao.iniciado_em).getTime() / 1000)}:f>`,
-      '',
-      `**Qtd. Participantes:** ${participantes.length}/${acao.quantidade_participantes}`,
-      `**Tipo da Ação:** ${acao.tipo_acao || 'Não definido'}`,
-      `**Resultado:** ${acao.resultado || 'Em andamento'}`,
-      '',
-      `**Dinheiro:** ${formatarMoeda(acao.dinheiro)}`,
-      '',
-      '**Participantes**',
-      listaParticipantes
-    ].join('\n'))
+    .setDescription(
+      [
+        `**Comando da ação:** ${acao.comando_texto || 'Ninguém assumiu o comando ainda'}`,
+        `**Ação iniciada:** <t:${Math.floor(new Date(acao.iniciado_em).getTime() / 1000)}:f>`,
+        '',
+        `**Qtd. Participantes:** ${participantes.length}/${acao.quantidade_participantes}`,
+        `**Tipo da Ação:** ${acao.tipo_acao || 'Não definido'}`,
+        `**Resultado:** ${acao.resultado || 'Em andamento'}`,
+        '',
+        `**Dinheiro:** ${formatarMoeda(acao.dinheiro)}`,
+        '',
+        '**Participantes**',
+        listaParticipantes,
+      ].join('\n')
+    )
     .setFooter({ text: `Ação #${acao.id}` })
     .setTimestamp();
 }
@@ -836,28 +854,30 @@ function criarEmbedLogAcao(acao, participantes) {
   const totalParticipantes = participantes.length || 1;
   const valorPorPessoa = Math.floor(Number(acao.dinheiro || 0) / totalParticipantes);
   const listaParticipantes = participantes.length
-    ? participantes.map(participante => `<@${participante.usuario_id}>`).join('\n')
+    ? participantes.map((participante) => `<@${participante.usuario_id}>`).join('\n')
     : 'Nenhum participante confirmado.';
 
   return new EmbedBuilder()
     .setColor(0x2f3136)
     .setTitle(acao.nome_acao || obterLabelTamanhoAcao(acao.tamanho))
-    .setDescription([
-      `**Comando da ação:** ${acao.comando_texto || 'Não definido'}`,
-      `**Ação iniciada:** <t:${Math.floor(new Date(acao.iniciado_em).getTime() / 1000)}:f>`,
-      '',
-      `**Qtd. Participantes:** ${participantes.length}`,
-      `**Tipo da Ação:** ${acao.tipo_acao || 'Não definido'}`,
-      `**Resultado:** ${acao.resultado || 'Não definido'}`,
-      '',
-      `**Dinheiro:** ${formatarMoeda(acao.dinheiro)}`,
-      '',
-      '**Participantes**',
-      listaParticipantes,
-      '',
-      `**Valor por pessoa:** ${formatarMoeda(valorPorPessoa)}`,
-      `**Finalizada:** <t:${Math.floor(new Date(acao.finalizado_em || new Date()).getTime() / 1000)}:f>`
-    ].join('\n'))
+    .setDescription(
+      [
+        `**Comando da ação:** ${acao.comando_texto || 'Não definido'}`,
+        `**Ação iniciada:** <t:${Math.floor(new Date(acao.iniciado_em).getTime() / 1000)}:f>`,
+        '',
+        `**Qtd. Participantes:** ${participantes.length}`,
+        `**Tipo da Ação:** ${acao.tipo_acao || 'Não definido'}`,
+        `**Resultado:** ${acao.resultado || 'Não definido'}`,
+        '',
+        `**Dinheiro:** ${formatarMoeda(acao.dinheiro)}`,
+        '',
+        '**Participantes**',
+        listaParticipantes,
+        '',
+        `**Valor por pessoa:** ${formatarMoeda(valorPorPessoa)}`,
+        `**Finalizada:** <t:${Math.floor(new Date(acao.finalizado_em || new Date()).getTime() / 1000)}:f>`,
+      ].join('\n')
+    )
     .setFooter({ text: `Ação #${acao.id}` })
     .setTimestamp(new Date(acao.finalizado_em || new Date()));
 }
@@ -874,8 +894,8 @@ async function renderizarMensagemAcao(interactionOrChannel, acaoId, desabilitado
     embeds: [criarEmbedAcao(acao, participantes)],
     components: [
       criarSelectResultadoAcao(acaoId, desabilitado),
-      criarBotoesAcao(acaoId, desabilitado)
-    ]
+      criarBotoesAcao(acaoId, desabilitado),
+    ],
   };
 
   if (acao.mensagem_id) {
@@ -900,7 +920,7 @@ async function finalizarAcao(interaction, acaoId) {
   if (!acao) {
     return interaction.reply({
       content: 'Não encontrei essa ação.',
-      ephemeral: true
+      ephemeral: true,
     });
   }
 
@@ -909,21 +929,21 @@ async function finalizarAcao(interaction, acaoId) {
   if (!acao.nome_acao || !acao.tipo_acao || !acao.resultado) {
     return interaction.reply({
       content: 'Defina a ação, o tipo e o resultado antes de finalizar.',
-      ephemeral: true
+      ephemeral: true,
     });
   }
 
   if (!acao.comando_texto) {
     return interaction.reply({
       content: 'É necessário que alguém assuma o comando da ação antes de finalizar.',
-      ephemeral: true
+      ephemeral: true,
     });
   }
 
   if (!participantes.length) {
     return interaction.reply({
       content: 'É necessário ter ao menos um participante confirmado para finalizar.',
-      ephemeral: true
+      ephemeral: true,
     });
   }
 
@@ -936,13 +956,13 @@ async function finalizarAcao(interaction, acaoId) {
   if (!canalLog || canalLog.type !== ChannelType.GuildText) {
     return interaction.reply({
       content: 'Não encontrei o canal de log de ações configurado.',
-      ephemeral: true
+      ephemeral: true,
     });
   }
 
   await renderizarMensagemAcao(interaction, acaoId, true);
   await canalLog.send({
-    embeds: [criarEmbedLogAcao(acaoAtualizada || acaoFinalizada, participantes)]
+    embeds: [criarEmbedLogAcao(acaoAtualizada || acaoFinalizada, participantes)],
   });
 
   if (acao.mensagem_id) {
@@ -952,7 +972,7 @@ async function finalizarAcao(interaction, acaoId) {
       const mensagemAcao = await canalOrigem.messages.fetch(acao.mensagem_id).catch(() => null);
 
       if (mensagemAcao) {
-        await mensagemAcao.delete().catch(error => {
+        await mensagemAcao.delete().catch((error) => {
           console.error(`Não foi possível apagar a mensagem da ação #${acaoId}:`, error);
         });
       }
@@ -961,7 +981,7 @@ async function finalizarAcao(interaction, acaoId) {
 
   return interaction.reply({
     content: 'Ação finalizada e log registrado com sucesso.',
-    ephemeral: true
+    ephemeral: true,
   });
 }
 
@@ -971,7 +991,7 @@ function obterConfigLavagem(tipo) {
       tipo,
       titulo: 'Lavagem Parceria',
       taxaPercentual: 20,
-      cor: 0x2f3136
+      cor: 0x2f3136,
     };
   }
 
@@ -979,7 +999,7 @@ function obterConfigLavagem(tipo) {
     tipo: 'pista',
     titulo: 'Lavagem Pista',
     taxaPercentual: 30,
-    cor: 0x2f3136
+    cor: 0x2f3136,
   };
 }
 
@@ -991,7 +1011,7 @@ function calcularValoresLavagem(quantidade, taxaPercentual) {
   return {
     valorTotal,
     valorFaccao,
-    valorCliente
+    valorCliente,
   };
 }
 
@@ -1034,7 +1054,7 @@ function criarModalLavagem(tipo) {
   return modal;
 }
 
-function criarEmbedAprovacaoLavagem(lavagem) {
+function _criarEmbedAprovacaoLavagemLegacy(lavagem) {
   const config = obterConfigLavagem(lavagem.tipo);
 
   return new EmbedBuilder()
@@ -1067,7 +1087,11 @@ function criarEmbedAprovacaoLavagem(lavagem) {
       { name: 'Taxa', value: `${lavagem.taxa_percentual}%`, inline: true },
       { name: 'Usuário', value: `<@${lavagem.usuario_id}>`, inline: true },
       { name: 'Passaporte', value: lavagem.personagem_id, inline: true },
-      { name: 'Aprovado por', value: lavagem.aprovado_por_id ? `<@${lavagem.aprovado_por_id}>` : 'Não informado', inline: true }
+      {
+        name: 'Aprovado por',
+        value: lavagem.aprovado_por_id ? `<@${lavagem.aprovado_por_id}>` : 'Não informado',
+        inline: true,
+      }
     )
     .setFields(
       { name: 'Grupo', value: lavagem.grupo, inline: true },
@@ -1096,11 +1120,11 @@ function criarBotoesAprovacaoLavagem(lavagemId, desabilitado = false) {
         .setLabel('Recusar')
         .setStyle(ButtonStyle.Danger)
         .setDisabled(desabilitado)
-    )
+    ),
   ];
 }
 
-function criarEmbedRegistroLavagem(lavagem) {
+function _criarEmbedRegistroLavagemLegacy(lavagem) {
   const config = obterConfigLavagem(lavagem.tipo);
 
   return new EmbedBuilder()
@@ -1125,7 +1149,11 @@ function criarEmbedRegistroLavagem(lavagem) {
       { name: 'Taxa', value: `${lavagem.taxa_percentual}%`, inline: true },
       { name: 'Usuário', value: `<@${lavagem.usuario_id}>`, inline: true },
       { name: 'Passaporte', value: lavagem.personagem_id, inline: true },
-      { name: 'Aprovado por', value: lavagem.aprovado_por_id ? `<@${lavagem.aprovado_por_id}>` : 'Não informado', inline: true }
+      {
+        name: 'Aprovado por',
+        value: lavagem.aprovado_por_id ? `<@${lavagem.aprovado_por_id}>` : 'Não informado',
+        inline: true,
+      }
     )
     .setFooter({ text: `Lavagem #${lavagem.id}` })
     .setTimestamp(new Date(lavagem.atualizado_em || lavagem.criado_em));
@@ -1167,7 +1195,11 @@ function criarEmbedRegistroLavagem(lavagem) {
       { name: 'Taxa', value: `${lavagem.taxa_percentual}%`, inline: true },
       { name: 'Usuário', value: `<@${lavagem.usuario_id}>`, inline: true },
       { name: 'Passaporte', value: lavagem.personagem_id, inline: true },
-      { name: 'Aprovado por', value: lavagem.aprovado_por_id ? `<@${lavagem.aprovado_por_id}>` : 'Não informado', inline: true }
+      {
+        name: 'Aprovado por',
+        value: lavagem.aprovado_por_id ? `<@${lavagem.aprovado_por_id}>` : 'Não informado',
+        inline: true,
+      }
     )
     .setFooter({ text: `Lavagem #${lavagem.id}` })
     .setTimestamp(new Date(lavagem.atualizado_em || lavagem.criado_em));
@@ -1182,21 +1214,21 @@ async function processarModalLavagem(interaction, tipo) {
   if (!/^\d+$/.test(quantidadeTexto)) {
     return interaction.reply({
       content: 'A quantidade para lavar deve conter apenas números inteiros.',
-      ephemeral: true
+      ephemeral: true,
     });
   }
 
   if (!/^\d+$/.test(personagemId)) {
     return interaction.reply({
       content: 'O ID do personagem deve conter apenas números.',
-      ephemeral: true
+      ephemeral: true,
     });
   }
 
   if (!grupo || grupo.length < 2) {
     return interaction.reply({
       content: 'Informe um grupo válido.',
-      ephemeral: true
+      ephemeral: true,
     });
   }
 
@@ -1205,7 +1237,7 @@ async function processarModalLavagem(interaction, tipo) {
   if (quantidade <= 0) {
     return interaction.reply({
       content: 'A quantidade para lavar deve ser maior que zero.',
-      ephemeral: true
+      ephemeral: true,
     });
   }
 
@@ -1224,7 +1256,7 @@ async function processarModalLavagem(interaction, tipo) {
     valorCliente: valores.valorCliente,
     status: 'pendente',
     criadoEm: new Date(),
-    atualizadoEm: new Date()
+    atualizadoEm: new Date(),
   });
 
   const canalAprovacao = await client.channels.fetch(CANAL_APROVACAO_LAVAGEM_ID).catch(() => null);
@@ -1235,13 +1267,13 @@ async function processarModalLavagem(interaction, tipo) {
 
   const mensagemAprovacao = await canalAprovacao.send({
     embeds: [criarEmbedAprovacaoLavagem(lavagem)],
-    components: criarBotoesAprovacaoLavagem(lavagem.id)
+    components: criarBotoesAprovacaoLavagem(lavagem.id),
   });
 
   await atualizarMensagemAprovacaoLavagem(lavagem.id, mensagemAprovacao.id, canalAprovacao.id);
 
   return interaction.editReply({
-    content: `${config.titulo} enviada para aprovação com sucesso.`
+    content: `${config.titulo} enviada para aprovação com sucesso.`,
   });
 }
 
@@ -1251,26 +1283,27 @@ async function finalizarLavagem(interaction, lavagemId, acao) {
   if (!lavagem) {
     return interaction.reply({
       content: 'Não encontrei essa solicitação de lavagem.',
-      ephemeral: true
+      ephemeral: true,
     });
   }
 
   if (lavagem.status !== 'pendente') {
     return interaction.reply({
       content: `Essa lavagem já foi ${lavagem.status}.`,
-      ephemeral: true
+      ephemeral: true,
     });
   }
 
   await interaction.deferReply({ ephemeral: true });
 
-  const lavagemAtualizada = acao === 'aprovar'
-    ? await aprovarLavagem(lavagemId, interaction.user)
-    : await recusarLavagem(lavagemId, interaction.user);
+  const lavagemAtualizada =
+    acao === 'aprovar'
+      ? await aprovarLavagem(lavagemId, interaction.user)
+      : await recusarLavagem(lavagemId, interaction.user);
 
   if (!lavagemAtualizada) {
     return interaction.editReply({
-      content: 'Essa lavagem já foi processada por outra pessoa.'
+      content: 'Essa lavagem já foi processada por outra pessoa.',
     });
   }
 
@@ -1283,12 +1316,12 @@ async function finalizarLavagem(interaction, lavagemId, acao) {
     .spliceFields(7, 1, {
       name: 'Status',
       value: acao === 'aprovar' ? 'Aprovada' : 'Recusada',
-      inline: true
+      inline: true,
     });
 
   await interaction.message.edit({
     embeds: [embedAtualizado],
-    components: criarBotoesAprovacaoLavagem(lavagemId, true)
+    components: criarBotoesAprovacaoLavagem(lavagemId, true),
   });
 
   if (acao === 'aprovar') {
@@ -1299,21 +1332,20 @@ async function finalizarLavagem(interaction, lavagemId, acao) {
     }
 
     await canalRegistro.send({
-      embeds: [criarEmbedRegistroLavagem(lavagemAtualizada)]
+      embeds: [criarEmbedRegistroLavagem(lavagemAtualizada)],
     });
   }
 
   return interaction.editReply({
-    content: acao === 'aprovar'
-      ? 'Lavagem aprovada e registrada com sucesso.'
-      : 'Lavagem recusada com sucesso.'
+    content:
+      acao === 'aprovar'
+        ? 'Lavagem aprovada e registrada com sucesso.'
+        : 'Lavagem recusada com sucesso.',
   });
 }
 
 function criarModalCadastro() {
-  const modal = new ModalBuilder()
-    .setCustomId(CADASTRO_MODAL_ID)
-    .setTitle('Cadastro VSYNC');
+  const modal = new ModalBuilder().setCustomId(CADASTRO_MODAL_ID).setTitle('Cadastro VSYNC');
 
   const nomeInput = new TextInputBuilder()
     .setCustomId('personagem_nome')
@@ -1344,16 +1376,18 @@ function criarPainelCadastro() {
   const embed = new EmbedBuilder()
     .setColor(0x2f3136)
     .setTitle('Registro no Discord')
-    .setDescription([
-      'Faça seu registro corretamente e aguarde a aprovação da gerência.',
-      '',
-      '━━━━━━━━━━━━━━━━━━',
-      '**Registro Facção**',
-      '',
-      '• Clique nas opções abaixo para fazer seu registro dentro do Discord.',
-      '• Um canal privado exclusivo será criado só para você e a gerência.',
-      '• Nesse canal você poderá tirar dúvidas, resolver pendências e registrar farm.'
-    ].join('\n'))
+    .setDescription(
+      [
+        'Faça seu registro corretamente e aguarde a aprovação da gerência.',
+        '',
+        '━━━━━━━━━━━━━━━━━━',
+        '**Registro Facção**',
+        '',
+        '• Clique nas opções abaixo para fazer seu registro dentro do Discord.',
+        '• Um canal privado exclusivo será criado só para você e a gerência.',
+        '• Nesse canal você poderá tirar dúvidas, resolver pendências e registrar farm.',
+      ].join('\n')
+    )
     .setThumbnail(CADASTRO_THUMBNAIL_URL)
     .setFooter({ text: 'VSYNC • Painel de Cadastro' })
     .setTimestamp();
@@ -1372,7 +1406,7 @@ function criarPainelCadastro() {
 
   return {
     embed,
-    components: [row]
+    components: [row],
   };
 }
 
@@ -1398,7 +1432,7 @@ async function criarOuAtualizarCanalCadastro(guild, membro, nomeFormatado, perso
   const permissionOverwrites = [
     {
       id: guild.roles.everyone.id,
-      deny: [PermissionFlagsBits.ViewChannel]
+      deny: [PermissionFlagsBits.ViewChannel],
     },
     {
       id: membro.id,
@@ -1407,9 +1441,9 @@ async function criarOuAtualizarCanalCadastro(guild, membro, nomeFormatado, perso
         PermissionFlagsBits.SendMessages,
         PermissionFlagsBits.ReadMessageHistory,
         PermissionFlagsBits.AttachFiles,
-        PermissionFlagsBits.EmbedLinks
-      ]
-    }
+        PermissionFlagsBits.EmbedLinks,
+      ],
+    },
   ];
 
   if (cargoGerenciaId) {
@@ -1419,8 +1453,8 @@ async function criarOuAtualizarCanalCadastro(guild, membro, nomeFormatado, perso
         PermissionFlagsBits.ViewChannel,
         PermissionFlagsBits.SendMessages,
         PermissionFlagsBits.ReadMessageHistory,
-        PermissionFlagsBits.ManageMessages
-      ]
+        PermissionFlagsBits.ManageMessages,
+      ],
     });
   }
 
@@ -1428,7 +1462,7 @@ async function criarOuAtualizarCanalCadastro(guild, membro, nomeFormatado, perso
     const canalEditData = {
       name: nomeCanal,
       permissionOverwrites,
-      topic: `Cadastro de ${nomeFormatado} | ${personagemId}`
+      topic: `Cadastro de ${nomeFormatado} | ${personagemId}`,
     };
 
     if (categoriaId) {
@@ -1444,7 +1478,7 @@ async function criarOuAtualizarCanalCadastro(guild, membro, nomeFormatado, perso
     name: nomeCanal,
     type: ChannelType.GuildText,
     topic: `Cadastro de ${nomeFormatado} | ${personagemId}`,
-    permissionOverwrites
+    permissionOverwrites,
   };
 
   if (categoriaId) {
@@ -1478,12 +1512,12 @@ async function aplicarCadastroUsuario(guild, user, nomeBruto, personagemId, opco
   const apelido = `${nomeFormatado} | ${personagemId}`;
   const canal = await criarOuAtualizarCanalCadastro(guild, membro, nomeFormatado, personagemId);
 
-  await membro.setNickname(apelido).catch(error => {
+  await membro.setNickname(apelido).catch((error) => {
     console.error(`Não foi possível alterar o apelido de ${user.tag}:`, error);
   });
 
   if (process.env.CARGO_CADASTRADO_ID) {
-    await membro.roles.add(process.env.CARGO_CADASTRADO_ID).catch(error => {
+    await membro.roles.add(process.env.CARGO_CADASTRADO_ID).catch((error) => {
       console.error(`Falha ao adicionar cargo de cadastro para ${user.tag}:`, error);
     });
   }
@@ -1499,14 +1533,14 @@ async function aplicarCadastroUsuario(guild, user, nomeBruto, personagemId, opco
     canalId: canal.id,
     canalNome: canal.name,
     criadoEm: new Date(),
-    atualizadoEm: new Date()
+    atualizadoEm: new Date(),
   });
 
   return {
     nomeFormatado,
     personagemId,
     apelido,
-    canal
+    canal,
   };
 }
 
@@ -1517,20 +1551,22 @@ async function enviarMensagemCanalCadastro(
   personagemId,
   {
     titulo = 'Cadastro Recebido',
-    descricaoFinal = 'Use este canal para falar com a gerência, tirar dúvidas e acompanhar seu processo.'
+    descricaoFinal = 'Use este canal para falar com a gerência, tirar dúvidas e acompanhar seu processo.',
   } = {}
 ) {
   const embedCanal = new EmbedBuilder()
     .setColor(0x2f3136)
     .setTitle(titulo)
-    .setDescription([
-      `Bem-vindo, <@${usuarioId}>.`,
-      '',
-      `**Personagem:** ${nomeFormatado}`,
-      `**ID:** ${personagemId}`,
-      '',
-      descricaoFinal
-    ].join('\n'))
+    .setDescription(
+      [
+        `Bem-vindo, <@${usuarioId}>.`,
+        '',
+        `**Personagem:** ${nomeFormatado}`,
+        `**ID:** ${personagemId}`,
+        '',
+        descricaoFinal,
+      ].join('\n')
+    )
     .setTimestamp();
 
   await canal.send({ content: `<@${usuarioId}>`, embeds: [embedCanal] });
@@ -1540,7 +1576,7 @@ async function processarCadastro(interaction) {
   if (!interaction.inGuild()) {
     return interaction.reply({
       content: 'Esse cadastro só pode ser feito dentro do servidor.',
-      ephemeral: true
+      ephemeral: true,
     });
   }
 
@@ -1561,7 +1597,7 @@ async function processarCadastro(interaction) {
     );
   } catch (error) {
     return interaction.editReply({
-      content: error.message || 'Não foi possível concluir o cadastro.'
+      content: error.message || 'Não foi possível concluir o cadastro.',
     });
   }
 
@@ -1573,7 +1609,7 @@ async function processarCadastro(interaction) {
   );
 
   return interaction.editReply({
-    content: `Cadastro concluído com sucesso. Seu canal foi criado em <#${resultadoCadastro.canal.id}>.`
+    content: `Cadastro concluído com sucesso. Seu canal foi criado em <#${resultadoCadastro.canal.id}>.`,
   });
 }
 
@@ -1600,12 +1636,7 @@ async function processarRelatorioSemanal() {
       continue;
     }
 
-    await salvarRelatorioSemanal(
-      usuario.usuario_id,
-      usuario.usuario_tag,
-      semana,
-      total
-    );
+    await salvarRelatorioSemanal(usuario.usuario_id, usuario.usuario_tag, semana, total);
 
     await manterUltimos52RelatoriosPorUsuario(usuario.usuario_id);
     await resetarFarmUsuario(usuario.usuario_id);
@@ -1622,16 +1653,18 @@ function criarPainel() {
   const embed = new EmbedBuilder()
     .setColor(0x2f3136)
     .setTitle('🪪 Painel para Membros')
-    .setDescription([
-      'Selecione abaixo as opções disponíveis.',
-      '',
-      '━━━━━━━━━━━━━━━━━━',
-      '**🎯 Meta de Farm**',
-      'Verifique como está o andamento do seu farm semanal.',
-      '',
-      '**💰 Registro**',
-      'Notifique suas lavagens e peça para a gerência aprovar sua lavagem.'
-    ].join('\n'))
+    .setDescription(
+      [
+        'Selecione abaixo as opções disponíveis.',
+        '',
+        '━━━━━━━━━━━━━━━━━━',
+        '**🎯 Meta de Farm**',
+        'Verifique como está o andamento do seu farm semanal.',
+        '',
+        '**💰 Registro**',
+        'Notifique suas lavagens e peça para a gerência aprovar sua lavagem.',
+      ].join('\n')
+    )
     .setThumbnail(PAINEL_THUMBNAIL_URL)
     .setFooter({ text: 'VSYNC • Painel Central' })
     .setTimestamp();
@@ -1659,7 +1692,7 @@ function criarPainel() {
 
   return {
     embed,
-    components: [row1, row2]
+    components: [row1, row2],
   };
 }
 
@@ -1677,22 +1710,23 @@ async function publicarOuAtualizarPainelPrincipal() {
   }
 
   const mensagens = await canal.messages.fetch({ limit: 20 });
-  const mensagemExistente = mensagens.find(message =>
-    message.author.id === client.user.id &&
-    message.embeds.some(embed => embed.title === painel.embed.data.title)
+  const mensagemExistente = mensagens.find(
+    (message) =>
+      message.author.id === client.user.id &&
+      message.embeds.some((embed) => embed.title === painel.embed.data.title)
   );
 
   if (mensagemExistente) {
     await mensagemExistente.edit({
       embeds: [painel.embed],
-      components: painel.components
+      components: painel.components,
     });
     return;
   }
 
   await canal.send({
     embeds: [painel.embed],
-    components: painel.components
+    components: painel.components,
   });
 }
 
@@ -1720,20 +1754,20 @@ client.once('ready', () => {
       }
     },
     {
-      timezone: 'America/Sao_Paulo'
+      timezone: 'America/Sao_Paulo',
     }
   );
 
-  publicarOuAtualizarPainelPrincipal().catch(error => {
+  publicarOuAtualizarPainelPrincipal().catch((error) => {
     console.error('Erro ao publicar o painel principal persistente:', error);
   });
 
-  publicarOuAtualizarPainelAcoes().catch(error => {
+  publicarOuAtualizarPainelAcoes().catch((error) => {
     console.error('Erro ao publicar o painel de ações persistente:', error);
   });
 });
 
-client.on('guildMemberRemove', async member => {
+client.on('guildMemberRemove', async (member) => {
   try {
     console.log(`[guildMemberRemove] Saída detectada: ${member.user.tag} (${member.id})`);
 
@@ -1745,7 +1779,10 @@ client.on('guildMemberRemove', async member => {
       );
 
       if (cadastroUsuario.canal_id) {
-        const canalMovido = await moverCanalPrivadoParaCategoriaSaida(member.guild, cadastroUsuario.canal_id).catch(error => {
+        const canalMovido = await moverCanalPrivadoParaCategoriaSaida(
+          member.guild,
+          cadastroUsuario.canal_id
+        ).catch((error) => {
           console.error(
             `[guildMemberRemove] Falha ao mover o canal privado ${cadastroUsuario.canal_id} de ${member.user.tag} (${member.id}) para a categoria de saída:`,
             error
@@ -1764,21 +1801,28 @@ client.on('guildMemberRemove', async member => {
         }
       }
     } else {
-      console.log(`[guildMemberRemove] Nenhum cadastro encontrado para ${member.user.tag} (${member.id}).`);
+      console.log(
+        `[guildMemberRemove] Nenhum cadastro encontrado para ${member.user.tag} (${member.id}).`
+      );
     }
   } catch (error) {
-    console.error(`[guildMemberRemove] Erro ao processar saída de ${member.user.tag} (${member.id}):`, error);
+    console.error(
+      `[guildMemberRemove] Erro ao processar saída de ${member.user.tag} (${member.id}):`,
+      error
+    );
   }
 });
 
-client.on('guildMemberAdd', async member => {
+client.on('guildMemberAdd', async (member) => {
   try {
     console.log(`[guildMemberAdd] Entrada detectada: ${member.user.tag} (${member.id})`);
 
     const cadastroUsuario = await buscarCadastroPorUsuario(member.id);
 
     if (!cadastroUsuario) {
-      console.log(`[guildMemberAdd] Nenhum cadastro encontrado para ${member.user.tag} (${member.id}).`);
+      console.log(
+        `[guildMemberAdd] Nenhum cadastro encontrado para ${member.user.tag} (${member.id}).`
+      );
       return;
     }
 
@@ -1801,7 +1845,8 @@ client.on('guildMemberAdd', async member => {
       resultadoCadastro.personagemId,
       {
         titulo: 'Cadastro Reativado',
-        descricaoFinal: 'Seu cadastro anterior foi localizado no banco de dados e seu canal privado foi reativado automaticamente.'
+        descricaoFinal:
+          'Seu cadastro anterior foi localizado no banco de dados e seu canal privado foi reativado automaticamente.',
       }
     );
 
@@ -1809,7 +1854,10 @@ client.on('guildMemberAdd', async member => {
       `[guildMemberAdd] Cadastro reativado com sucesso para ${member.user.tag} (${member.id}) no canal ${resultadoCadastro.canal.id}.`
     );
   } catch (error) {
-    console.error(`[guildMemberAdd] Erro ao reativar cadastro de ${member.user.tag} (${member.id}):`, error);
+    console.error(
+      `[guildMemberAdd] Erro ao reativar cadastro de ${member.user.tag} (${member.id}):`,
+      error
+    );
   }
 });
 
@@ -1817,21 +1865,21 @@ client.on('guildMemberAdd', async member => {
    INTERAÇÕES
 ========================= */
 
-client.on('interactionCreate', async interaction => {
+client.on('interactionCreate', async (interaction) => {
   try {
     if (interaction.isChatInputCommand()) {
       if (interaction.commandName === 'painel_acoes') {
         if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
           return interaction.reply({
             content: 'Você não tem permissão para publicar o painel de ações.',
-            ephemeral: true
+            ephemeral: true,
           });
         }
         await publicarOuAtualizarPainelAcoes();
 
         return interaction.reply({
           content: `Painel de ações sincronizado no canal <#${PAINEL_ACOES_CANAL_ID}>.`,
-          ephemeral: true
+          ephemeral: true,
         });
       }
 
@@ -1839,7 +1887,7 @@ client.on('interactionCreate', async interaction => {
         if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
           return interaction.reply({
             content: 'Você não tem permissão para publicar o painel de cadastro.',
-            ephemeral: true
+            ephemeral: true,
           });
         }
 
@@ -1849,12 +1897,12 @@ client.on('interactionCreate', async interaction => {
         await interaction.channel.send({
           embeds: [painelCadastro.embed],
           components: painelCadastro.components,
-          files: arquivos
+          files: arquivos,
         });
 
         return interaction.reply({
           content: 'Painel de cadastro publicado neste canal.',
-          ephemeral: true
+          ephemeral: true,
         });
       }
 
@@ -1862,7 +1910,7 @@ client.on('interactionCreate', async interaction => {
         if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
           return interaction.reply({
             content: 'Você não tem permissão para editar cadastros.',
-            ephemeral: true
+            ephemeral: true,
           });
         }
 
@@ -1874,7 +1922,7 @@ client.on('interactionCreate', async interaction => {
         if (!cadastroAtual) {
           return interaction.reply({
             content: 'Esse usuário ainda não possui cadastro.',
-            ephemeral: true
+            ephemeral: true,
           });
         }
 
@@ -1892,12 +1940,12 @@ client.on('interactionCreate', async interaction => {
           );
         } catch (error) {
           return interaction.editReply({
-            content: error.message || 'Não foi possível editar o cadastro.'
+            content: error.message || 'Não foi possível editar o cadastro.',
           });
         }
 
         return interaction.editReply({
-          content: `Cadastro de <@${usuario.id}> atualizado para ${resultadoCadastro.nomeFormatado} | ${resultadoCadastro.personagemId}. Canal: <#${resultadoCadastro.canal.id}>`
+          content: `Cadastro de <@${usuario.id}> atualizado para ${resultadoCadastro.nomeFormatado} | ${resultadoCadastro.personagemId}. Canal: <#${resultadoCadastro.canal.id}>`,
         });
       }
 
@@ -1906,7 +1954,7 @@ client.on('interactionCreate', async interaction => {
         return interaction.reply({
           embeds: [painel.embed],
           components: painel.components,
-          ephemeral: true
+          ephemeral: true,
         });
       }
 
@@ -1920,14 +1968,14 @@ client.on('interactionCreate', async interaction => {
         if (foto && foto.contentType && !foto.contentType.startsWith('image/')) {
           return interaction.reply({
             content: 'O arquivo enviado em foto precisa ser uma imagem válida.',
-            ephemeral: true
+            ephemeral: true,
           });
         }
 
         if (link && !/^https?:\/\//i.test(link)) {
           return interaction.reply({
             content: 'O link informado para a imagem precisa começar com http:// ou https://.',
-            ephemeral: true
+            ephemeral: true,
           });
         }
 
@@ -1935,8 +1983,9 @@ client.on('interactionCreate', async interaction => {
 
         if (!imagem) {
           return interaction.reply({
-            content: 'Envie uma imagem no campo de foto ou informe um link de imagem para registrar o farm.',
-            ephemeral: true
+            content:
+              'Envie uma imagem no campo de foto ou informe um link de imagem para registrar o farm.',
+            ephemeral: true,
           });
         }
 
@@ -1945,7 +1994,7 @@ client.on('interactionCreate', async interaction => {
         if (!canal) {
           return interaction.reply({
             content: 'Não encontrei o canal de registros.',
-            ephemeral: true
+            ephemeral: true,
           });
         }
 
@@ -1956,13 +2005,11 @@ client.on('interactionCreate', async interaction => {
         ) {
           return interaction.reply({
             content: 'O canal configurado não é um canal de texto válido.',
-            ephemeral: true
+            ephemeral: true,
           });
         }
 
-        const imagemEmbed = foto?.url
-          ? foto.url
-          : await resolverUrlImagem(link);
+        const imagemEmbed = foto?.url ? foto.url : await resolverUrlImagem(link);
 
         const embed = new EmbedBuilder()
           .setTitle('📦 Novo registro de farm')
@@ -1981,18 +2028,21 @@ client.on('interactionCreate', async interaction => {
         await canal.send({ embeds: [embed] });
 
         if (cadastroUsuario?.canal_id) {
-          const canalPrivado = await client.channels.fetch(cadastroUsuario.canal_id).catch(() => null);
+          const canalPrivado = await client.channels
+            .fetch(cadastroUsuario.canal_id)
+            .catch(() => null);
 
           if (
             canalPrivado &&
-            (
-              canalPrivado.type === ChannelType.GuildText ||
+            (canalPrivado.type === ChannelType.GuildText ||
               canalPrivado.type === ChannelType.PublicThread ||
-              canalPrivado.type === ChannelType.PrivateThread
-            )
+              canalPrivado.type === ChannelType.PrivateThread)
           ) {
-            await canalPrivado.send({ embeds: [embed] }).catch(error => {
-              console.error(`Falha ao enviar registro de farm para o canal privado de ${interaction.user.tag}:`, error);
+            await canalPrivado.send({ embeds: [embed] }).catch((error) => {
+              console.error(
+                `Falha ao enviar registro de farm para o canal privado de ${interaction.user.tag}:`,
+                error
+              );
             });
           }
         }
@@ -2006,12 +2056,12 @@ client.on('interactionCreate', async interaction => {
           imagem,
           categoria: 'farm',
           status: 'registrado',
-          criadoEm: new Date()
+          criadoEm: new Date(),
         });
 
         return interaction.reply({
           content: '✅ Farm registrado com sucesso.',
-          ephemeral: true
+          ephemeral: true,
         });
       }
 
@@ -2021,12 +2071,12 @@ client.on('interactionCreate', async interaction => {
         if (!relatorios.length) {
           return interaction.reply({
             content: 'Você não possui relatórios ainda.',
-            ephemeral: true
+            ephemeral: true,
           });
         }
 
         const descricao = relatorios
-          .map(r => `📅 **Semana:** ${r.semana_referencia}\n📦 **Total:** ${r.total_itens}`)
+          .map((r) => `📅 **Semana:** ${r.semana_referencia}\n📦 **Total:** ${r.total_itens}`)
           .join('\n\n');
 
         const embed = new EmbedBuilder()
@@ -2035,13 +2085,13 @@ client.on('interactionCreate', async interaction => {
           .addFields({
             name: 'Usuário',
             value: `<@${interaction.user.id}>`,
-            inline: false
+            inline: false,
           })
           .setTimestamp();
 
         return interaction.reply({
           embeds: [embed],
-          ephemeral: true
+          ephemeral: true,
         });
       }
 
@@ -2051,12 +2101,12 @@ client.on('interactionCreate', async interaction => {
         if (!dados.length) {
           return interaction.reply({
             content: 'Nenhum farm registrado ainda.',
-            ephemeral: true
+            ephemeral: true,
           });
         }
 
         const descricao = dados
-          .map(user => `👤 <@${user.usuario_id}>: **${user.total}**`)
+          .map((user) => `👤 <@${user.usuario_id}>: **${user.total}**`)
           .join('\n');
 
         const totalGeral = dados.reduce((acc, user) => acc + user.total, 0);
@@ -2067,13 +2117,13 @@ client.on('interactionCreate', async interaction => {
           .addFields({
             name: 'Total Geral',
             value: String(totalGeral),
-            inline: false
+            inline: false,
           })
           .setTimestamp();
 
         return interaction.reply({
           embeds: [embed],
-          ephemeral: true
+          ephemeral: true,
         });
       }
 
@@ -2082,7 +2132,7 @@ client.on('interactionCreate', async interaction => {
 
         return interaction.reply({
           content: '✅ Relatório semanal executado manualmente para teste.',
-          ephemeral: true
+          ephemeral: true,
         });
       }
     }
@@ -2107,24 +2157,29 @@ client.on('interactionCreate', async interaction => {
         if (!rascunho) {
           return interaction.reply({
             content: 'Esse rascunho de ação expirou ou não pertence a você.',
-            ephemeral: true
+            ephemeral: true,
           });
         }
 
-        const quantidadeParticipantesTexto = interaction.fields.getTextInputValue('quantidade_participantes').trim();
+        const quantidadeParticipantesTexto = interaction.fields
+          .getTextInputValue('quantidade_participantes')
+          .trim();
         const dinheiroTexto = interaction.fields.getTextInputValue('dinheiro').trim();
 
-        if (!/^\d+$/.test(quantidadeParticipantesTexto) || Number(quantidadeParticipantesTexto) <= 0) {
+        if (
+          !/^\d+$/.test(quantidadeParticipantesTexto) ||
+          Number(quantidadeParticipantesTexto) <= 0
+        ) {
           return interaction.reply({
             content: 'A quantidade de participantes deve ser um número inteiro maior que zero.',
-            ephemeral: true
+            ephemeral: true,
           });
         }
 
         if (!/^\d+$/.test(dinheiroTexto) || Number(dinheiroTexto) <= 0) {
           return interaction.reply({
             content: 'O valor em dinheiro deve ser um número inteiro maior que zero.',
-            ephemeral: true
+            ephemeral: true,
           });
         }
 
@@ -2134,7 +2189,7 @@ client.on('interactionCreate', async interaction => {
         return interaction.reply({
           content: 'Detalhes atualizados. Use o painel abaixo para concluir a criação da ação.',
           ephemeral: true,
-          ...montarPayloadRascunhoAcao(rascunho)
+          ...montarPayloadRascunhoAcao(rascunho),
         });
       }
     }
@@ -2147,21 +2202,27 @@ client.on('interactionCreate', async interaction => {
       if (interaction.customId === 'acao_pequena') {
         return interaction.reply({
           ephemeral: true,
-          ...montarPayloadRascunhoAcao(criarRascunhoAcao(interaction.user.id, interaction.channelId, 'pequena'))
+          ...montarPayloadRascunhoAcao(
+            criarRascunhoAcao(interaction.user.id, interaction.channelId, 'pequena')
+          ),
         });
       }
 
       if (interaction.customId === 'acao_media') {
         return interaction.reply({
           ephemeral: true,
-          ...montarPayloadRascunhoAcao(criarRascunhoAcao(interaction.user.id, interaction.channelId, 'media'))
+          ...montarPayloadRascunhoAcao(
+            criarRascunhoAcao(interaction.user.id, interaction.channelId, 'media')
+          ),
         });
       }
 
       if (interaction.customId === 'acao_grande') {
         return interaction.reply({
           ephemeral: true,
-          ...montarPayloadRascunhoAcao(criarRascunhoAcao(interaction.user.id, interaction.channelId, 'grande'))
+          ...montarPayloadRascunhoAcao(
+            criarRascunhoAcao(interaction.user.id, interaction.channelId, 'grande')
+          ),
         });
       }
 
@@ -2189,7 +2250,7 @@ client.on('interactionCreate', async interaction => {
         await renderizarMensagemAcao(interaction, acaoId);
         return interaction.reply({
           content: 'Você entrou na ação.',
-          ephemeral: true
+          ephemeral: true,
         });
       }
 
@@ -2199,7 +2260,7 @@ client.on('interactionCreate', async interaction => {
         await renderizarMensagemAcao(interaction, acaoId);
         return interaction.reply({
           content: 'Você saiu da ação.',
-          ephemeral: true
+          ephemeral: true,
         });
       }
 
@@ -2210,7 +2271,7 @@ client.on('interactionCreate', async interaction => {
         await renderizarMensagemAcao(interaction, acaoId);
         return interaction.reply({
           content: 'Você assumiu o comando da ação.',
-          ephemeral: true
+          ephemeral: true,
         });
       }
 
@@ -2226,7 +2287,7 @@ client.on('interactionCreate', async interaction => {
         if (!rascunho) {
           return interaction.reply({
             content: 'Esse rascunho de ação expirou ou não pertence a você.',
-            ephemeral: true
+            ephemeral: true,
           });
         }
 
@@ -2240,14 +2301,15 @@ client.on('interactionCreate', async interaction => {
         if (!rascunho) {
           return interaction.reply({
             content: 'Esse rascunho de ação expirou ou não pertence a você.',
-            ephemeral: true
+            ephemeral: true,
           });
         }
 
         if (!rascunhoAcaoEstaPronto(rascunho)) {
           return interaction.reply({
-            content: 'Defina a ação, o tipo, a quantidade de participantes e o dinheiro antes de criar.',
-            ephemeral: true
+            content:
+              'Defina a ação, o tipo, a quantidade de participantes e o dinheiro antes de criar.',
+            ephemeral: true,
           });
         }
 
@@ -2265,7 +2327,7 @@ client.on('interactionCreate', async interaction => {
           mensagemId: null,
           status: 'em_andamento',
           iniciadoEm: new Date(),
-          finalizadoEm: null
+          finalizadoEm: null,
         });
 
         const mensagem = await renderizarMensagemAcao(interaction, acao.id);
@@ -2274,7 +2336,7 @@ client.on('interactionCreate', async interaction => {
         return interaction.update({
           content: `Ação criada com sucesso em ${mensagem ? `<#${interaction.channelId}>` : 'este canal'}.`,
           embeds: [],
-          components: []
+          components: [],
         });
       }
 
@@ -2284,7 +2346,7 @@ client.on('interactionCreate', async interaction => {
         if (!registros.length) {
           return interaction.reply({
             content: 'Você ainda não possui farms registrados.',
-            ephemeral: true
+            ephemeral: true,
           });
         }
 
@@ -2305,8 +2367,7 @@ client.on('interactionCreate', async interaction => {
           .map(([item, total]) => `📦 **${item}**: \`${total}\``)
           .join('\n');
 
-        const totalQuantidade = Object.values(agrupado)
-          .reduce((acc, val) => acc + Number(val), 0);
+        const totalQuantidade = Object.values(agrupado).reduce((acc, val) => acc + Number(val), 0);
 
         const embed = new EmbedBuilder()
           .setTitle('📊 Seu Farm')
@@ -2320,17 +2381,16 @@ client.on('interactionCreate', async interaction => {
 
         return interaction.reply({
           embeds: [embed],
-          ephemeral: true
+          ephemeral: true,
         });
       }
 
       if (interaction.customId === 'lavagem') {
         return interaction.reply({
           content: '💰 Sistema de lavagem',
-          ephemeral: true
+          ephemeral: true,
         });
       }
-
     }
 
     if (interaction.isStringSelectMenu()) {
@@ -2342,14 +2402,14 @@ client.on('interactionCreate', async interaction => {
         if (!rascunho) {
           return interaction.reply({
             content: 'Esse rascunho de ação expirou ou não pertence a você.',
-            ephemeral: true
+            ephemeral: true,
           });
         }
 
         if (nomeAcao === 'indisponivel') {
           return interaction.reply({
             content: 'Cadastre ações em ACOES_DISPONIVEIS antes de usar esta lista.',
-            ephemeral: true
+            ephemeral: true,
           });
         }
 
@@ -2366,7 +2426,7 @@ client.on('interactionCreate', async interaction => {
         if (!rascunho) {
           return interaction.reply({
             content: 'Esse rascunho de ação expirou ou não pertence a você.',
-            ephemeral: true
+            ephemeral: true,
           });
         }
 
@@ -2382,7 +2442,7 @@ client.on('interactionCreate', async interaction => {
         await renderizarMensagemAcao(interaction, acaoId);
         return interaction.reply({
           content: `Resultado definido como ${resultado}.`,
-          ephemeral: true
+          ephemeral: true,
         });
       }
     }
@@ -2392,7 +2452,7 @@ client.on('interactionCreate', async interaction => {
     if (!interaction.replied && !interaction.deferred) {
       return interaction.reply({
         content: 'Ocorreu um erro ao processar esta ação.',
-        ephemeral: true
+        ephemeral: true,
       });
     }
   }
@@ -2401,7 +2461,7 @@ client.on('interactionCreate', async interaction => {
 /* =========================
    INICIALIZAÇÃO
 ========================= */
-async function testarConexaoBanco() {
+async function _testarConexaoBanco() {
   try {
     const result = await db.query('SELECT NOW()');
     console.log('✅ Banco conectado com sucesso:', result.rows[0]);
@@ -2414,7 +2474,7 @@ async function testarConexaoBanco() {
 async function startBot() {
   try {
     console.log('1. Iniciando bot...');
-    
+
     console.log('2. Testando conexão com banco...');
     const teste = await db.query('SELECT NOW() AS agora');
     console.log('3. Banco conectado:', teste.rows[0]);

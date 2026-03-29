@@ -26,7 +26,7 @@ async function salvarRegistroBanco(dados) {
       dados.acao || null,
       dados.categoria || null,
       dados.status || 'pendente',
-      dados.criadoEm
+      dados.criadoEm,
     ]
   );
 }
@@ -92,13 +92,7 @@ async function salvarRelatorioSemanal(usuarioId, usuarioTag, semanaReferencia, t
         criado_em
       ) VALUES ($1,$2,$3,$4,$5)
     `,
-    [
-      usuarioId,
-      usuarioTag,
-      semanaReferencia,
-      totalItens,
-      new Date()
-    ]
+    [usuarioId, usuarioTag, semanaReferencia, totalItens, new Date()]
   );
 }
 
@@ -143,10 +137,10 @@ async function buscarResumoSemanalGlobal() {
     ORDER BY total DESC
   `);
 
-  return result.rows.map(row => ({
+  return result.rows.map((row) => ({
     usuario_tag: row.usuario_tag,
     usuario_id: row.usuario_id,
-    total: Number(row.total || 0)
+    total: Number(row.total || 0),
   }));
 }
 
@@ -190,7 +184,7 @@ async function salvarOuAtualizarCadastro(dados) {
       dados.canalId,
       dados.canalNome,
       dados.criadoEm,
-      dados.atualizadoEm
+      dados.atualizadoEm,
     ]
   );
 }
@@ -270,7 +264,7 @@ async function salvarAcao(dados) {
       dados.mensagemId || null,
       dados.status || 'em_andamento',
       dados.iniciadoEm,
-      dados.finalizadoEm || null
+      dados.finalizadoEm || null,
     ]
   );
 
@@ -306,7 +300,14 @@ async function buscarAcaoPorId(acaoId) {
 }
 
 async function atualizarCampoAcao(acaoId, campo, valor) {
-  const camposPermitidos = new Set(['nome_acao', 'comando_texto', 'tipo_acao', 'resultado', 'status', 'finalizado_em']);
+  const camposPermitidos = new Set([
+    'nome_acao',
+    'comando_texto',
+    'tipo_acao',
+    'resultado',
+    'status',
+    'finalizado_em',
+  ]);
 
   if (!camposPermitidos.has(campo)) {
     throw new Error('Campo de ação não permitido.');
@@ -400,7 +401,7 @@ async function salvarLavagem(dados) {
       dados.mensagemAprovacaoId || null,
       dados.canalAprovacaoId || null,
       dados.criadoEm,
-      dados.atualizadoEm
+      dados.atualizadoEm,
     ]
   );
 
@@ -516,7 +517,7 @@ async function recusarLavagem(lavagemId, recusador) {
     ...lavagem,
     status: 'recusada',
     recusado_por_id: recusador.id,
-    recusado_por_tag: recusador.tag
+    recusado_por_tag: recusador.tag,
   };
 }
 
@@ -546,5 +547,5 @@ module.exports = {
   salvarOuAtualizarCadastro,
   salvarRegistroBanco,
   salvarRelatorioSemanal,
-  validarCadastroExistenteUsuario
+  validarCadastroExistenteUsuario,
 };
