@@ -11,6 +11,7 @@ const {
   GatewayIntentBits,
   Partials,
 } = require('discord.js');
+const fs = require('fs');
 
 const db = require('./database/db');
 const initDatabase = require('./database/init');
@@ -233,8 +234,8 @@ async function publicarOuAtualizarPainelAcoes() {
     return;
   }
 
-  const painel = criarPainelAcoes();
-  const arquivos = obterArquivosPainelAcoes(require('fs'));
+  const painel = criarPainelAcoes(fs);
+  const arquivos = obterArquivosPainelAcoes(fs);
   const canal = await client.channels.fetch(PAINEL_ACOES_CANAL_ID).catch(() => null);
 
   if (!canal || canal.type !== ChannelType.GuildText) {
@@ -413,7 +414,7 @@ async function moverCanalPrivadoParaCategoriaSaida(guild, canalId) {
   return true;
 }
 
-client.once('ready', () => {
+client.once('clientReady', () => {
   console.log(`Bot online como ${client.user.tag}`);
   console.log('[startup] Intents ativos: Guilds, GuildMembers');
 
