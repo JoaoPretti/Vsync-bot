@@ -47,6 +47,7 @@ const { criarModalLavagem, finalizarLavagem, processarModalLavagem } = require('
 const {
   CANAL_LOG_ACOES_ID,
   PAINEL_ACOES_CANAL_ID,
+  PAINEL_CADASTRO_CANAL_ID,
   PAINEL_PRINCIPAL_CANAL_ID,
   PAINEL_THUMBNAIL_URL,
 } = require('./config/constants');
@@ -267,6 +268,44 @@ async function publicarOuAtualizarPainelAcoes() {
   await canal.send(payload);
 }
 
+async function publicarOuAtualizarPainelCadastro() {
+  if (!PAINEL_CADASTRO_CANAL_ID) {
+    return;
+  }
+
+  const painel = criarPainelCadastro();
+  const arquivos = obterArquivosPainelCadastro();
+  const canal = await client.channels.fetch(PAINEL_CADASTRO_CANAL_ID).catch(() => null);
+
+  if (!canal || canal.type !== ChannelType.GuildText) {
+    console.error('Canal do painel de cadastro nao encontrado ou invalido.');
+    return;
+  }
+
+  const mensagens = await canal.messages.fetch({ limit: 20 });
+  const mensagemExistente = mensagens.find(
+    (message) =>
+      message.author.id === client.user.id &&
+      message.embeds.some((embed) => embed.title === painel.embed.data.title)
+  );
+
+  const payload = {
+    embeds: [painel.embed],
+    components: painel.components,
+    files: arquivos,
+  };
+
+  if (mensagemExistente) {
+    await mensagemExistente.edit({
+      embeds: [painel.embed],
+      components: painel.components,
+    });
+    return;
+  }
+
+  await canal.send(payload);
+}
+
 async function renderizarMensagemAcao(interactionOrChannel, acaoId, desabilitado = false) {
   const acao = await buscarAcaoPorId(acaoId);
 
@@ -434,6 +473,10 @@ client.once('clientReady', () => {
 
   publicarOuAtualizarPainelPrincipal().catch((error) => {
     console.error('Erro ao publicar o painel principal persistente:', error);
+  });
+
+  publicarOuAtualizarPainelCadastro().catch((error) => {
+    console.error('Erro ao publicar o painel de cadastro persistente:', error);
   });
 
   publicarOuAtualizarPainelAcoes().catch((error) => {
