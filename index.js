@@ -440,7 +440,7 @@ async function finalizarAcao(interaction, acaoId) {
   }
 
   return interaction.reply({
-      content: 'Ação finalizada e log registrado com sucesso.',
+    content: 'Ação finalizada e log registrado com sucesso.',
     ephemeral: true,
   });
 }
