@@ -609,6 +609,7 @@ client.on('interactionCreate', async (interaction) =>
     adicionarParticipanteAcao,
     aplicarCadastroUsuario,
     atualizarCampoAcao,
+    buscarAcaoPorId,
     buscarCadastroPorUsuario,
     buscarRegistrosFarmPorUsuario,
     buscarRelatoriosUsuario,

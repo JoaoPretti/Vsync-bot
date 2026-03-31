@@ -367,6 +367,7 @@ async function processarBotao(interaction, context) {
   const {
     client,
     formatarMoeda,
+    buscarAcaoPorId,
     buscarRegistrosFarmPorUsuario,
     criarModalCadastro,
     criarModalDetalhesRascunhoAcao,
@@ -450,7 +451,14 @@ async function processarBotao(interaction, context) {
 
   if (interaction.customId.startsWith(ACAO_SAIR_PREFIX)) {
     const acaoId = Number(interaction.customId.slice(ACAO_SAIR_PREFIX.length));
+    const acao = await buscarAcaoPorId(acaoId);
+
     await removerParticipanteAcao(acaoId, interaction.user.id);
+
+    if (acao?.comando_texto === `<@${interaction.user.id}>`) {
+      await atualizarCampoAcao(acaoId, 'comando_texto', null);
+    }
+
     await renderizarMensagemAcao(interaction, acaoId);
     return interaction.reply({
       content: 'Voce saiu da acao.',
