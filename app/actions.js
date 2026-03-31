@@ -234,10 +234,9 @@ function criarPainelAcoes() {
       new SectionBuilder()
         .addTextDisplayComponents(
           criarTexto(
-            [
-              '## Central de acoes',
-              'Abra, acompanhe e finalize operacoes no mesmo painel.',
-            ].join('\n')
+            ['## Central de acoes', 'Abra, acompanhe e finalize operacoes no mesmo painel.'].join(
+              '\n'
+            )
           )
         )
         .setThumbnailAccessory(criarThumbnailPadrao())
@@ -409,9 +408,7 @@ function criarContainerMensagemAcao(acao, participantes, formatarMoeda, desabili
       )
     )
     .addSeparatorComponents(criarSeparador())
-    .addTextDisplayComponents(
-      criarTexto(['**Equipe confirmada**', listaParticipantes].join('\n'))
-    )
+    .addTextDisplayComponents(criarTexto(['**Equipe confirmada**', listaParticipantes].join('\n')))
     .addSeparatorComponents(criarSeparador())
     .addTextDisplayComponents(
       criarTexto(

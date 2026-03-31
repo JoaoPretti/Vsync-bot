@@ -208,10 +208,9 @@ function criarPainel() {
       new SectionBuilder()
         .addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            [
-              '## Central VSYNC',
-              'Acesse os fluxos principais da faccao em um unico painel.',
-            ].join('\n')
+            ['## Central VSYNC', 'Acesse os fluxos principais da faccao em um unico painel.'].join(
+              '\n'
+            )
           )
         )
         .setThumbnailAccessory(
