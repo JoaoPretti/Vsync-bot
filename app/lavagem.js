@@ -133,7 +133,7 @@ function criarContainerAprovacaoLavagem(lavagem, desabilitado = false, descricao
           new TextDisplayBuilder().setContent(
             [
               '## Central de lavagem',
-              descricao || `Revise a solicitacao de ${config.titulo.toLowerCase()} nesta central.`,
+              descricao || `Revise a solicitação de ${config.titulo.toLowerCase()} nesta central.`,
             ].join('\n')
           )
         )
@@ -151,9 +151,9 @@ function criarContainerAprovacaoLavagem(lavagem, desabilitado = false, descricao
           `**Grupo:** ${lavagem.grupo}`,
           `**Valor Total:** ${formatarMoeda(lavagem.quantidade)}`,
           `**Valor do Cliente:** ${formatarMoeda(lavagem.valor_cliente)}`,
-          `**Valor da Faccao:** ${formatarMoeda(lavagem.valor_faccao)}`,
+          `**Valor da Facção:** ${formatarMoeda(lavagem.valor_faccao)}`,
           `**Taxa:** ${lavagem.taxa_percentual}%`,
-          `**Usuario:** <@${lavagem.usuario_id}>`,
+          `**Usuário:** <@${lavagem.usuario_id}>`,
           `**Passaporte:** ${lavagem.personagem_id}`,
           `**Status:** ${statusTexto}`,
         ].join('\n')
@@ -201,9 +201,9 @@ function criarContainerRegistroLavagem(lavagem) {
           `**Grupo:** ${lavagem.grupo}`,
           `**Valor Total:** ${formatarMoeda(lavagem.quantidade)}`,
           `**Valor do Cliente:** ${formatarMoeda(lavagem.valor_cliente)}`,
-          `**Valor da Faccao:** ${formatarMoeda(lavagem.valor_faccao)}`,
+          `**Valor da Facção:** ${formatarMoeda(lavagem.valor_faccao)}`,
           `**Taxa:** ${lavagem.taxa_percentual}%`,
-          `**Usuario:** <@${lavagem.usuario_id}>`,
+          `**Usuário:** <@${lavagem.usuario_id}>`,
           `**Passaporte:** ${lavagem.personagem_id}`,
           `**Aprovado por:** ${
             lavagem.aprovado_por_id ? `<@${lavagem.aprovado_por_id}>` : 'Não informado'
@@ -303,7 +303,7 @@ async function finalizarLavagem(interaction, lavagemId, acao, client) {
 
   if (lavagem.status !== 'pendente') {
     return interaction.reply({
-      content: `Essa lavagem ja foi ${lavagem.status}.`,
+      content: `Essa lavagem já foi ${lavagem.status}.`,
       ephemeral: true,
     });
   }
@@ -317,7 +317,7 @@ async function finalizarLavagem(interaction, lavagemId, acao, client) {
 
   if (!lavagemAtualizada) {
     return interaction.editReply({
-      content: 'Essa lavagem ja foi processada por outra pessoa.',
+      content: 'Essa lavagem já foi processada por outra pessoa.',
     });
   }
 

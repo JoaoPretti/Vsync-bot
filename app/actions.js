@@ -35,9 +35,9 @@ const TIPOS_ACAO = ['Tiro', 'Fuga', 'Arma Branca'];
 const rascunhosAcao = new Map();
 
 function obterLabelTamanhoAcao(tamanho) {
-  if (tamanho === 'pequena') return 'Acao Pequena';
-  if (tamanho === 'media') return 'Acao Media';
-  return 'Acao Grande';
+  if (tamanho === 'pequena') return 'Ação Pequena';
+  if (tamanho === 'media') return 'Ação Média';
+  return 'Ação Grande';
 }
 
 function criarTokenRascunhoAcao(userId) {
@@ -174,7 +174,7 @@ function criarSelectResultadoAcao(acaoId, desabilitado = false) {
       .setPlaceholder('Selecione o resultado')
       .setDisabled(desabilitado)
       .addOptions(
-        { label: 'Vitoria', value: 'Vitoria' },
+        { label: 'Vitória', value: 'Vitoria' },
         { label: 'Derrota', value: 'Derrota' },
         { label: 'Empate', value: 'Empate' }
       )
@@ -185,7 +185,7 @@ function criarBotoesAcao(acaoId, desabilitado = false) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`${ACAO_COMANDO_PREFIX}${acaoId}`)
-      .setLabel('Assumir lideranca')
+      .setLabel('Assumir liderança')
       .setStyle(ButtonStyle.Primary)
       .setDisabled(desabilitado),
     new ButtonBuilder()
