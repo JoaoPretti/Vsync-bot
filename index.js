@@ -7,9 +7,14 @@ const {
   ButtonStyle,
   ChannelType,
   Client,
-  EmbedBuilder,
+  ContainerBuilder,
   GatewayIntentBits,
+  MessageFlags,
   Partials,
+  SectionBuilder,
+  SeparatorBuilder,
+  TextDisplayBuilder,
+  ThumbnailBuilder,
 } = require('discord.js');
 
 const db = require('./database/db');
@@ -176,25 +181,6 @@ async function resetarFarmUsuario(usuarioId) {
 }
 
 function criarPainel() {
-  const embed = new EmbedBuilder()
-    .setColor(0x2f3136)
-    .setTitle('Painel para Membros')
-    .setDescription(
-      [
-        'Selecione abaixo as opcoes disponiveis.',
-        '',
-        '━━━━━━━━━━━━━━━━━━',
-        '**Meta de Farm**',
-        'Verifique como esta o andamento do seu farm semanal.',
-        '',
-        '**Registro**',
-        'Notifique suas lavagens e peca para a gerencia aprovar sua lavagem.',
-      ].join('\n')
-    )
-    .setThumbnail(PAINEL_THUMBNAIL_URL)
-    .setFooter({ text: 'VSYNC • Painel Central' })
-    .setTimestamp();
-
   const row1 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('farm')
@@ -216,9 +202,42 @@ function criarPainel() {
       .setEmoji('💲')
   );
 
+  const container = new ContainerBuilder()
+    .setAccentColor(0x2f3136)
+    .addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(
+            [
+              '## Painel para Membros',
+              'Selecione abaixo as opcoes disponiveis para consultar farm ou registrar lavagem.',
+            ].join('\n')
+          )
+        )
+        .setThumbnailAccessory(
+          new ThumbnailBuilder().setURL(PAINEL_THUMBNAIL_URL).setDescription('VSYNC')
+        )
+    )
+    .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        [
+          '**Meta de Farm**',
+          'Verifique como esta o andamento do seu farm semanal.',
+          '',
+          '**Registro**',
+          'Notifique suas lavagens e peca para a gerencia aprovar sua lavagem.',
+        ].join('\n')
+      )
+    )
+    .addActionRowComponents(row1)
+    .addActionRowComponents(row2);
+
   return {
-    embed,
-    components: [row1, row2],
+    content: null,
+    embeds: [],
+    flags: MessageFlags.IsComponentsV2,
+    components: [container],
   };
 }
 
@@ -239,21 +258,23 @@ async function publicarOuAtualizarPainelPrincipal() {
   const mensagemExistente = mensagens.find(
     (message) =>
       message.author.id === client.user.id &&
-      message.embeds.some((embed) => embed.title === painel.embed.data.title)
+      (message.embeds.some((embed) => embed.title === 'Painel para Membros') ||
+        mensagemPossuiAlgumCustomId(message, ['farm', 'lavagem_parceria', 'lavagem_pista']))
   );
 
+  const payload = {
+    content: painel.content,
+    embeds: painel.embeds,
+    flags: painel.flags,
+    components: painel.components,
+  };
+
   if (mensagemExistente) {
-    await mensagemExistente.edit({
-      embeds: [painel.embed],
-      components: painel.components,
-    });
+    await mensagemExistente.edit(payload);
     return;
   }
 
-  await canal.send({
-    embeds: [painel.embed],
-    components: painel.components,
-  });
+  await canal.send(payload);
 }
 
 async function publicarOuAtualizarPainelAcoes() {
