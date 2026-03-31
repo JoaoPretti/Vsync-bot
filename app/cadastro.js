@@ -1,21 +1,23 @@
-const fs = require('fs');
 const {
   ActionRowBuilder,
-  AttachmentBuilder,
   ButtonBuilder,
   ButtonStyle,
   ChannelType,
+  ContainerBuilder,
   EmbedBuilder,
+  MessageFlags,
   ModalBuilder,
   PermissionFlagsBits,
+  SectionBuilder,
+  SeparatorBuilder,
+  TextDisplayBuilder,
   TextInputBuilder,
   TextInputStyle,
+  ThumbnailBuilder,
 } = require('discord.js');
 
 const {
-  CADASTRO_BANNER_URL,
   CADASTRO_BUTTON_ID,
-  CADASTRO_IMAGE_PATH,
   CADASTRO_MODAL_ID,
   CADASTRO_THUMBNAIL_URL,
 } = require('../config/constants');
@@ -65,30 +67,6 @@ function criarModalCadastro() {
 }
 
 function criarPainelCadastro() {
-  const possuiBannerLocal = fs.existsSync(CADASTRO_IMAGE_PATH);
-  const embed = new EmbedBuilder()
-    .setColor(0x2f3136)
-    .setTitle('Registro no Discord')
-    .setDescription(
-      [
-        'Faça seu registro corretamente e aguarde a aprovação da gerência.',
-        '',
-        '━━━━━━━━━━━━━━━━━━',
-        '**Registro Facção**',
-        '',
-        '• Clique nas opções abaixo para fazer seu registro dentro do Discord.',
-        '• Um canal privado exclusivo será criado só para você e a gerência.',
-        '• Nesse canal você poderá tirar dúvidas, resolver pendências e registrar farm.',
-      ].join('\n')
-    )
-    .setThumbnail(CADASTRO_THUMBNAIL_URL)
-    .setFooter({ text: 'VSYNC • Painel de Cadastro' })
-    .setTimestamp();
-
-  if (possuiBannerLocal) {
-    embed.setImage(CADASTRO_BANNER_URL);
-  }
-
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(CADASTRO_BUTTON_ID)
@@ -97,18 +75,42 @@ function criarPainelCadastro() {
       .setEmoji('🪪')
   );
 
+  const container = new ContainerBuilder()
+    .setAccentColor(0x2f3136)
+    .addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(
+            [
+              '## Registro no Discord',
+              'Inicie seu cadastro e acompanhe o processo em um canal privado.',
+            ].join('\n')
+          )
+        )
+        .setThumbnailAccessory(
+          new ThumbnailBuilder().setURL(CADASTRO_THUMBNAIL_URL).setDescription('VSYNC')
+        )
+    )
+    .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        [
+          '**Como funciona**',
+          '- Clique no botao abaixo para abrir o formulario de cadastro.',
+          '- Um canal privado sera criado apenas para voce e a gerencia.',
+          '- Use esse canal para tirar duvidas, resolver pendencias e registrar farm.',
+        ].join('\n')
+      )
+    )
+    .addActionRowComponents(row);
+
   return {
-    embed,
-    components: [row],
+    identificador: 'painel_cadastro_v2',
+    content: null,
+    embeds: [],
+    flags: MessageFlags.IsComponentsV2,
+    components: [container],
   };
-}
-
-function obterArquivosPainelCadastro() {
-  if (!fs.existsSync(CADASTRO_IMAGE_PATH)) {
-    return [];
-  }
-
-  return [new AttachmentBuilder(CADASTRO_IMAGE_PATH)];
 }
 
 async function criarOuAtualizarCanalCadastro(guild, membro, nomeFormatado, personagemId) {
@@ -186,11 +188,11 @@ async function aplicarCadastroUsuario(guild, user, nomeBruto, personagemId, opco
   const nomeFormatado = capitalizarNomePersonagem(nomeBruto);
 
   if (!nomeFormatado || nomeFormatado.length < 3) {
-    throw new Error('Informe um nome de personagem válido.');
+    throw new Error('Informe um nome de personagem valido.');
   }
 
   if (!/^\d+$/.test(personagemId)) {
-    throw new Error('O ID do personagem deve conter apenas números.');
+    throw new Error('O ID do personagem deve conter apenas numeros.');
   }
 
   await validarCadastroExistenteUsuario(user.id, { permitirEdicao });
@@ -198,7 +200,7 @@ async function aplicarCadastroUsuario(guild, user, nomeBruto, personagemId, opco
   const conflitoCadastro = await validarPersonagemIdDisponivel(personagemId, user.id);
 
   if (conflitoCadastro) {
-    throw new Error(`O ID ${personagemId} já está cadastrado para outro usuário.`);
+    throw new Error(`O ID ${personagemId} ja esta cadastrado para outro usuario.`);
   }
 
   const membro = await guild.members.fetch(user.id);
@@ -206,7 +208,7 @@ async function aplicarCadastroUsuario(guild, user, nomeBruto, personagemId, opco
   const canal = await criarOuAtualizarCanalCadastro(guild, membro, nomeFormatado, personagemId);
 
   await membro.setNickname(apelido).catch((error) => {
-    console.error(`Não foi possível alterar o apelido de ${user.tag}:`, error);
+    console.error(`Nao foi possivel alterar o apelido de ${user.tag}:`, error);
   });
 
   if (process.env.CARGO_CADASTRADO_ID) {
@@ -244,7 +246,7 @@ async function enviarMensagemCanalCadastro(
   personagemId,
   {
     titulo = 'Cadastro Recebido',
-    descricaoFinal = 'Use este canal para falar com a gerência, tirar dúvidas e acompanhar seu processo.',
+    descricaoFinal = 'Use este canal para falar com a gerencia, tirar duvidas e acompanhar seu processo.',
   } = {}
 ) {
   const embedCanal = new EmbedBuilder()
@@ -268,7 +270,7 @@ async function enviarMensagemCanalCadastro(
 async function processarCadastro(interaction) {
   if (!interaction.inGuild()) {
     return interaction.reply({
-      content: 'Esse cadastro só pode ser feito dentro do servidor.',
+      content: 'Esse cadastro so pode ser feito dentro do servidor.',
       ephemeral: true,
     });
   }
@@ -290,7 +292,7 @@ async function processarCadastro(interaction) {
     );
   } catch (error) {
     return interaction.editReply({
-      content: error.message || 'Não foi possível concluir o cadastro.',
+      content: error.message || 'Nao foi possivel concluir o cadastro.',
     });
   }
 
@@ -302,7 +304,7 @@ async function processarCadastro(interaction) {
   );
 
   return interaction.editReply({
-    content: `Cadastro concluído com sucesso. Seu canal foi criado em <#${resultadoCadastro.canal.id}>.`,
+    content: `Cadastro concluido com sucesso. Seu canal foi criado em <#${resultadoCadastro.canal.id}>.`,
   });
 }
 
@@ -312,7 +314,6 @@ module.exports = {
   criarOuAtualizarCanalCadastro,
   criarPainelCadastro,
   enviarMensagemCanalCadastro,
-  obterArquivosPainelCadastro,
   processarCadastro,
   validarPersonagemIdDisponivel,
 };

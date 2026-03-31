@@ -36,13 +36,13 @@ const {
   criarModalCadastro,
   criarPainelCadastro,
   enviarMensagemCanalCadastro,
-  obterArquivosPainelCadastro,
   processarCadastro,
 } = require('./app/cadastro');
 const { processarInteracao } = require('./app/interactions');
 const { criarModalLavagem, finalizarLavagem, processarModalLavagem } = require('./app/lavagem');
 const {
   CANAL_LOG_ACOES_ID,
+  CADASTRO_BUTTON_ID,
   PAINEL_ACOES_CANAL_ID,
   PAINEL_CADASTRO_CANAL_ID,
   PAINEL_PRINCIPAL_CANAL_ID,
@@ -298,7 +298,6 @@ async function publicarOuAtualizarPainelCadastro() {
   }
 
   const painel = criarPainelCadastro();
-  const arquivos = obterArquivosPainelCadastro();
   const canal = await client.channels.fetch(PAINEL_CADASTRO_CANAL_ID).catch(() => null);
 
   if (!canal || canal.type !== ChannelType.GuildText) {
@@ -310,20 +309,19 @@ async function publicarOuAtualizarPainelCadastro() {
   const mensagemExistente = mensagens.find(
     (message) =>
       message.author.id === client.user.id &&
-      message.embeds.some((embed) => embed.title === painel.embed.data.title)
+      (message.embeds.some((embed) => embed.title === 'Registro no Discord') ||
+        mensagemPossuiAlgumCustomId(message, [CADASTRO_BUTTON_ID]))
   );
 
   const payload = {
-    embeds: [painel.embed],
+    content: painel.content,
+    embeds: painel.embeds,
+    flags: painel.flags,
     components: painel.components,
-    files: arquivos,
   };
 
   if (mensagemExistente) {
-    await mensagemExistente.edit({
-      embeds: [painel.embed],
-      components: painel.components,
-    });
+    await mensagemExistente.edit(payload);
     return;
   }
 
@@ -626,7 +624,6 @@ client.on('interactionCreate', async (interaction) =>
     formatarMoeda,
     montarPayloadRascunhoAcao,
     montarPayloadRascunhoConcluido,
-    obterArquivosPainelCadastro,
     obterRascunhoAcao,
     processarCadastro,
     processarModalLavagem,

@@ -27,7 +27,6 @@ async function processarComando(interaction, context) {
     resolverUrlImagem,
     publicarOuAtualizarPainelAcoes,
     criarPainelCadastro,
-    obterArquivosPainelCadastro,
   } = context;
 
   if (interaction.commandName === 'painel_acoes') {
@@ -55,13 +54,7 @@ async function processarComando(interaction, context) {
     }
 
     const painelCadastro = criarPainelCadastro();
-    const arquivos = obterArquivosPainelCadastro();
-
-    await interaction.channel.send({
-      embeds: [painelCadastro.embed],
-      components: painelCadastro.components,
-      files: arquivos,
-    });
+    await interaction.channel.send(painelCadastro);
 
     return interaction.reply({
       content: 'Painel de cadastro publicado neste canal.',
