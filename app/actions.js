@@ -286,6 +286,8 @@ function criarPainelAcoes() {
 
   return {
     identificador: 'painel_acoes_v2',
+    content: null,
+    embeds: [],
     flags: MessageFlags.IsComponentsV2,
     components: [container],
   };
@@ -425,6 +427,8 @@ function criarContainerMensagemAcao(acao, participantes, formatarMoeda, desabili
 
 function montarPayloadMensagemAcao(acao, participantes, formatarMoeda, desabilitado = false) {
   return {
+    content: null,
+    embeds: [],
     flags: MessageFlags.IsComponentsV2,
     components: [criarContainerMensagemAcao(acao, participantes, formatarMoeda, desabilitado)],
   };
@@ -432,6 +436,8 @@ function montarPayloadMensagemAcao(acao, participantes, formatarMoeda, desabilit
 
 function montarPayloadRascunhoConcluido(channelId) {
   return {
+    content: null,
+    embeds: [],
     flags: MessageFlags.IsComponentsV2,
     components: [
       criarContainerBase().addTextDisplayComponents(
