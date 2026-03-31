@@ -128,7 +128,7 @@ function criarSelectRascunhoAcoes(token, tamanho, valorAtual = null) {
   return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId(`${ACAO_RASCUNHO_NOME_PREFIX}${token}`)
-      .setPlaceholder('Selecione a operacao')
+      .setPlaceholder('Selecione a ação')
       .addOptions(
         opcoes.length
           ? opcoes
@@ -161,7 +161,7 @@ function criarBotoesRascunhoAcao(token, pronto = false) {
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId(`${ACAO_RASCUNHO_CONFIRMAR_PREFIX}${token}`)
-      .setLabel('Publicar operacao')
+      .setLabel('Publicar ação')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(!pronto)
   );
@@ -190,7 +190,7 @@ function criarBotoesAcao(acaoId, desabilitado = false) {
       .setDisabled(desabilitado),
     new ButtonBuilder()
       .setCustomId(`${ACAO_FINALIZAR_PREFIX}${acaoId}`)
-      .setLabel('Encerrar operacao')
+      .setLabel('Encerrar ação')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(desabilitado)
   );
@@ -200,12 +200,12 @@ function criarControlesAcaoSecundarios(acaoId, desabilitado = false) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`${ACAO_ENTRAR_PREFIX}${acaoId}`)
-      .setLabel('Entrar na operacao')
+      .setLabel('Entrar na ação')
       .setStyle(ButtonStyle.Success)
       .setDisabled(desabilitado),
     new ButtonBuilder()
       .setCustomId(`${ACAO_SAIR_PREFIX}${acaoId}`)
-      .setLabel('Sair da operacao')
+      .setLabel('Sair da ação')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(desabilitado)
   );
@@ -215,15 +215,15 @@ function criarBotoesPainelAcoes() {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('acao_pequena')
-      .setLabel('Operacao pequena')
+      .setLabel('Ação pequena')
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('acao_media')
-      .setLabel('Operacao media')
+      .setLabel('Ação média')
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('acao_grande')
-      .setLabel('Operacao grande')
+      .setLabel('Ação grande')
       .setStyle(ButtonStyle.Secondary)
   );
 }
@@ -234,10 +234,9 @@ function criarPainelAcoes() {
       new SectionBuilder()
         .addTextDisplayComponents(
           criarTexto(
-            [
-              '## Central de acoes',
-              'Selecione o porte e siga o fluxo da operacao neste painel.',
-            ].join('\n')
+            ['## Central de acoes', 'Selecione o porte e siga o fluxo da ação neste painel.'].join(
+              '\n'
+            )
           )
         )
         .setThumbnailAccessory(criarThumbnailPadrao())
@@ -247,7 +246,7 @@ function criarPainelAcoes() {
       criarTexto(
         [
           '**Fluxo da central**',
-          '- Escolha o porte da operacao.',
+          '- Escolha o porte da ação.',
           '- Monte o rascunho com modelo, estilo, equipe e valor.',
           '- Publique e acompanhe tudo no mesmo card.',
         ].join('\n')
@@ -285,7 +284,7 @@ function criarContainerRascunhoAcao(rascunho, formatarMoeda, aviso = null) {
           criarTexto(
             [
               '## Central de acoes',
-              'Preencha o rascunho da operacao e publique quando tudo estiver pronto.',
+              'Preencha o rascunho da ação e publique quando tudo estiver pronto.',
             ].join('\n')
           )
         )
@@ -295,7 +294,7 @@ function criarContainerRascunhoAcao(rascunho, formatarMoeda, aviso = null) {
     .addTextDisplayComponents(
       criarTexto(
         [
-          '**Resumo da operacao**',
+          '**Resumo da ação**',
           `Modelo: ${obterLabelTamanhoAcao(rascunho.tamanho)}`,
           `Tipo da acao: ${rascunho.nomeAcao || 'Nao selecionada'}`,
           `Estilo: ${rascunho.tipoAcao || 'Nao selecionado'}`,
@@ -399,7 +398,7 @@ function criarContainerMensagemAcao(acao, participantes, formatarMoeda, desabili
     .addTextDisplayComponents(
       criarTexto(
         [
-          '**Resumo da operacao**',
+          '**Resumo da ação**',
           `Modelo: ${obterLabelTamanhoAcao(acao.tamanho)}`,
           `Tipo da acao: ${acao.nome_acao || 'Nao definido'}`,
           `Estilo: ${acao.tipo_acao || 'Nao definido'}`,
@@ -446,7 +445,7 @@ function montarPayloadRascunhoConcluido(channelId) {
         criarTexto(
           [
             '## Central de acoes',
-            'Operacao criada com sucesso.',
+            'Ação criada com sucesso.',
             `A nova acao foi publicada em ${channelId ? `<#${channelId}>` : 'este canal'}.`,
             'Voce pode fechar esta mensagem.',
           ].join('\n')
@@ -481,7 +480,7 @@ function criarContainerLogAcao(acao, participantes, formatarMoeda) {
       criarTexto(
         [
           '**Resumo da central**',
-          `**Operacao:** ${acao.nome_acao || obterLabelTamanhoAcao(acao.tamanho)}`,
+          `**Ação:** ${acao.nome_acao || obterLabelTamanhoAcao(acao.tamanho)}`,
           `**Lideranca:** ${acao.comando_texto || 'Nao definida'}`,
           `**Estilo:** ${acao.tipo_acao || 'Nao definido'}`,
           `**Resultado:** ${acao.resultado || 'Nao definido'}`,
