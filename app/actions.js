@@ -93,11 +93,11 @@ function removerRascunhoAcao(token) {
 function rascunhoAcaoEstaPronto(rascunho) {
   return Boolean(
     rascunho?.nomeAcao &&
-      rascunho?.tipoAcao &&
-      Number.isInteger(rascunho?.quantidadeParticipantes) &&
-      rascunho.quantidadeParticipantes > 0 &&
-      Number.isInteger(rascunho?.dinheiro) &&
-      rascunho.dinheiro > 0
+    rascunho?.tipoAcao &&
+    Number.isInteger(rascunho?.quantidadeParticipantes) &&
+    rascunho.quantidadeParticipantes > 0 &&
+    Number.isInteger(rascunho?.dinheiro) &&
+    rascunho.dinheiro > 0
   );
 }
 
