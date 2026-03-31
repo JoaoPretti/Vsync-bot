@@ -1,4 +1,14 @@
-const { ChannelType, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const {
+  ChannelType,
+  ContainerBuilder,
+  EmbedBuilder,
+  MessageFlags,
+  PermissionFlagsBits,
+  SectionBuilder,
+  SeparatorBuilder,
+  TextDisplayBuilder,
+  ThumbnailBuilder,
+} = require('discord.js');
 
 const {
   ACAO_COMANDO_PREFIX,
@@ -11,8 +21,46 @@ const {
   LAVAGEM_APROVAR_PREFIX,
   LAVAGEM_MODAL_PREFIX,
   LAVAGEM_RECUSAR_PREFIX,
+  PAINEL_THUMBNAIL_URL,
   PAINEL_ACOES_CANAL_ID,
 } = require('../config/constants');
+
+function criarPayloadRegistroFarm({ item, quantidade, usuarioId, imagem, imagemEmbed }) {
+  const container = new ContainerBuilder()
+    .setAccentColor(0x2f3136)
+    .addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(
+            ['## Central de farm', 'Registro de farm enviado e contabilizado com sucesso.'].join(
+              '\n'
+            )
+          )
+        )
+        .setThumbnailAccessory(
+          new ThumbnailBuilder().setURL(PAINEL_THUMBNAIL_URL).setDescription('VSYNC')
+        )
+    )
+    .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        [
+          '**Resumo da central**',
+          `**Item:** ${item}`,
+          `**Quantidade:** ${quantidade}`,
+          `**Usuario:** <@${usuarioId}>`,
+          `**Comprovante:** ${imagemEmbed ? `[Abrir imagem](${imagemEmbed})` : imagem}`,
+        ].join('\n')
+      )
+    );
+
+  return {
+    content: null,
+    embeds: [],
+    flags: MessageFlags.IsComponentsV2,
+    components: [container],
+  };
+}
 
 async function processarComando(interaction, context) {
   const {
@@ -167,21 +215,15 @@ async function processarComando(interaction, context) {
 
     const imagemEmbed = foto?.url ? foto.url : await resolverUrlImagem(link);
 
-    const embed = new EmbedBuilder()
-      .setTitle('Novo registro de farm')
-      .addFields(
-        { name: 'Item', value: item, inline: true },
-        { name: 'Quantidade', value: String(quantidade), inline: true },
-        { name: 'Usuario', value: `<@${interaction.user.id}>`, inline: false },
-        { name: 'Imagem', value: imagem, inline: false }
-      )
-      .setTimestamp();
+    const payloadFarm = criarPayloadRegistroFarm({
+      item,
+      quantidade,
+      usuarioId: interaction.user.id,
+      imagem,
+      imagemEmbed,
+    });
 
-    if (imagemEmbed) {
-      embed.setImage(imagemEmbed);
-    }
-
-    await canal.send({ embeds: [embed] });
+    await canal.send(payloadFarm);
 
     if (cadastroUsuario?.canal_id) {
       const canalPrivado = await client.channels.fetch(cadastroUsuario.canal_id).catch(() => null);
@@ -192,7 +234,7 @@ async function processarComando(interaction, context) {
           canalPrivado.type === ChannelType.PublicThread ||
           canalPrivado.type === ChannelType.PrivateThread)
       ) {
-        await canalPrivado.send({ embeds: [embed] }).catch((error) => {
+        await canalPrivado.send(payloadFarm).catch((error) => {
           console.error(
             `Falha ao enviar registro de farm para o canal privado de ${interaction.user.tag}:`,
             error
