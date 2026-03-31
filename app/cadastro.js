@@ -70,7 +70,7 @@ function criarPainelCadastro() {
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(CADASTRO_BUTTON_ID)
-      .setLabel('Registro no Discord')
+      .setLabel('Iniciar cadastro')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🪪')
   );
@@ -82,8 +82,8 @@ function criarPainelCadastro() {
         .addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
             [
-              '## Registro no Discord',
-              'Inicie seu cadastro e acompanhe o processo em um canal privado.',
+              '## Central de cadastro',
+              'Inicie seu registro e acompanhe todo o processo em um canal privado.',
             ].join('\n')
           )
         )
@@ -95,10 +95,10 @@ function criarPainelCadastro() {
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         [
-          '**Como funciona**',
-          '- Clique no botao abaixo para abrir o formulario de cadastro.',
+          '**Fluxo de cadastro**',
+          '- Clique no botao abaixo para abrir o formulario.',
           '- Um canal privado sera criado apenas para voce e a gerencia.',
-          '- Use esse canal para tirar duvidas, resolver pendencias e registrar farm.',
+          '- Use esse canal para tirar duvidas, resolver pendencias e registrar seu farm.',
         ].join('\n')
       )
     )

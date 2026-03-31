@@ -133,8 +133,8 @@ function criarContainerAprovacaoLavagem(lavagem, desabilitado = false, descricao
         .addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
             [
-              `## Aprovacao Pendente - ${config.titulo}`,
-              descricao || 'Avalie a solicitacao abaixo.',
+              '## Central de lavagem',
+              descricao || `Revise a solicitacao de ${config.titulo.toLowerCase()} abaixo.`,
             ].join('\n')
           )
         )
@@ -148,6 +148,7 @@ function criarContainerAprovacaoLavagem(lavagem, desabilitado = false, descricao
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         [
+          '**Resumo da solicitacao**',
           `**Grupo:** ${lavagem.grupo}`,
           `**Valor Total:** ${formatarMoeda(lavagem.quantidade)}`,
           `**Valor do Cliente:** ${formatarMoeda(lavagem.valor_cliente)}`,
@@ -169,6 +170,56 @@ function montarPayloadAprovacaoLavagem(lavagem, desabilitado = false, descricao 
     embeds: [],
     flags: MessageFlags.IsComponentsV2,
     components: [criarContainerAprovacaoLavagem(lavagem, desabilitado, descricao)],
+  };
+}
+
+function criarContainerRegistroLavagem(lavagem) {
+  const config = obterConfigLavagem(lavagem.tipo);
+
+  return new ContainerBuilder()
+    .setAccentColor(config.cor)
+    .addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(
+            [
+              '## Central de lavagem',
+              `${config.titulo} aprovada e contabilizada com sucesso.`,
+            ].join('\n')
+          )
+        )
+        .setThumbnailAccessory(
+          new ThumbnailBuilder()
+            .setURL('https://cdn.discordapp.com/embed/avatars/0.png')
+            .setDescription('Lavagem')
+        )
+    )
+    .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        [
+          '**Resumo do registro**',
+          `**Grupo:** ${lavagem.grupo}`,
+          `**Valor Total:** ${formatarMoeda(lavagem.quantidade)}`,
+          `**Valor do Cliente:** ${formatarMoeda(lavagem.valor_cliente)}`,
+          `**Valor da Faccao:** ${formatarMoeda(lavagem.valor_faccao)}`,
+          `**Taxa:** ${lavagem.taxa_percentual}%`,
+          `**Usuario:** <@${lavagem.usuario_id}>`,
+          `**Passaporte:** ${lavagem.personagem_id}`,
+          `**Aprovado por:** ${
+            lavagem.aprovado_por_id ? `<@${lavagem.aprovado_por_id}>` : 'Nao informado'
+          }`,
+        ].join('\n')
+      )
+    );
+}
+
+function montarPayloadRegistroLavagem(lavagem) {
+  return {
+    content: null,
+    embeds: [],
+    flags: MessageFlags.IsComponentsV2,
+    components: [criarContainerRegistroLavagem(lavagem)],
   };
 }
 
@@ -334,9 +385,7 @@ async function finalizarLavagem(interaction, lavagemId, acao, client) {
       throw new Error('Canal de registro de lavagem nao encontrado ou invalido.');
     }
 
-    await canalRegistro.send({
-      embeds: [criarEmbedRegistroLavagem(lavagemAtualizada)],
-    });
+    await canalRegistro.send(montarPayloadRegistroLavagem(lavagemAtualizada));
   }
 
   return interaction.editReply({
@@ -352,8 +401,11 @@ module.exports = {
   criarBotoesAprovacaoLavagem,
   criarEmbedAprovacaoLavagem,
   criarEmbedRegistroLavagem,
+  criarContainerRegistroLavagem,
   criarModalLavagem,
   finalizarLavagem,
+  montarPayloadAprovacaoLavagem,
+  montarPayloadRegistroLavagem,
   obterConfigLavagem,
   processarModalLavagem,
 };

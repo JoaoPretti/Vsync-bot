@@ -235,8 +235,8 @@ function criarPainelAcoes() {
         .addTextDisplayComponents(
           criarTexto(
             [
-              '## Painel de acoes',
-              'Crie e acompanhe registros de acoes em um painel interativo.',
+              '## Central de acoes',
+              'Abra, acompanhe e finalize operacoes no mesmo painel.',
             ].join('\n')
           )
         )
@@ -246,10 +246,10 @@ function criarPainelAcoes() {
     .addTextDisplayComponents(
       criarTexto(
         [
-          '**Como funciona**',
+          '**Fluxo da operacao**',
           '- Escolha o porte da acao.',
-          '- Preencha o rascunho com tipo, estilo, equipe e dinheiro.',
-          '- Publique a acao e acompanhe tudo no mesmo card.',
+          '- Monte o rascunho com modelo, estilo, equipe e valor.',
+          '- Publique e acompanhe tudo no mesmo card.',
         ].join('\n')
       )
     )
@@ -284,8 +284,8 @@ function criarContainerRascunhoAcao(rascunho, formatarMoeda, aviso = null) {
         .addTextDisplayComponents(
           criarTexto(
             [
-              '## Painel interativo de acao',
-              'Defina os dados abaixo para publicar a acao com o visual integrado.',
+              '## Central de acoes',
+              'Monte a operacao passo a passo e publique quando tudo estiver pronto.',
             ].join('\n')
           )
         )
@@ -295,7 +295,7 @@ function criarContainerRascunhoAcao(rascunho, formatarMoeda, aviso = null) {
     .addTextDisplayComponents(
       criarTexto(
         [
-          '**Resumo atual**',
+          '**Resumo da operacao**',
           `Modelo: ${obterLabelTamanhoAcao(rascunho.tamanho)}`,
           `Tipo da acao: ${rascunho.nomeAcao || 'Nao selecionada'}`,
           `Estilo: ${rascunho.tipoAcao || 'Nao selecionado'}`,
@@ -310,7 +310,7 @@ function criarContainerRascunhoAcao(rascunho, formatarMoeda, aviso = null) {
     .addTextDisplayComponents(
       criarTexto(
         [
-          `**Etapa atual: ${pronto ? '3/3 - Confirmacao' : '2/3 - Configuracao'}**`,
+          `**Andamento: ${pronto ? '3/3 - Confirmacao' : '2/3 - Configuracao'}**`,
           pronto
             ? 'Tudo pronto para publicar. Revise os dados e use o botao final.'
             : 'Use os menus e o botao de detalhes logo abaixo para concluir a configuracao.',
@@ -388,8 +388,8 @@ function criarContainerMensagemAcao(acao, participantes, formatarMoeda, desabili
         .addTextDisplayComponents(
           criarTexto(
             [
-              '## Painel interativo de acao',
-              `Acompanhe a configuracao e o andamento de ${acao.nome_acao || obterLabelTamanhoAcao(acao.tamanho)}.`,
+              '## Central de acoes',
+              `Acompanhe o andamento de ${acao.nome_acao || obterLabelTamanhoAcao(acao.tamanho)} em tempo real.`,
             ].join('\n')
           )
         )
@@ -399,7 +399,7 @@ function criarContainerMensagemAcao(acao, participantes, formatarMoeda, desabili
     .addTextDisplayComponents(
       criarTexto(
         [
-          '**Resumo atual**',
+          '**Resumo da operacao**',
           `Modelo: ${obterLabelTamanhoAcao(acao.tamanho)}`,
           `Tipo da acao: ${acao.nome_acao || 'Nao definido'}`,
           `Estilo: ${acao.tipo_acao || 'Nao definido'}`,
@@ -410,13 +410,13 @@ function criarContainerMensagemAcao(acao, participantes, formatarMoeda, desabili
     )
     .addSeparatorComponents(criarSeparador())
     .addTextDisplayComponents(
-      criarTexto(['**Participantes selecionados**', listaParticipantes].join('\n'))
+      criarTexto(['**Equipe confirmada**', listaParticipantes].join('\n'))
     )
     .addSeparatorComponents(criarSeparador())
     .addTextDisplayComponents(
       criarTexto(
         [
-          `**Etapa atual: ${etapaAtual}**`,
+          `**Controle atual: ${etapaAtual}**`,
           `Comando atual: ${acao.comando_texto || 'Ninguem assumiu o comando ainda'}`,
           `Resultado: ${acao.resultado || 'Em andamento'}`,
           `Abertura: <t:${Math.floor(new Date(acao.iniciado_em).getTime() / 1000)}:f>`,
@@ -447,7 +447,8 @@ function montarPayloadRascunhoConcluido(channelId) {
       criarContainerBase().addTextDisplayComponents(
         criarTexto(
           [
-            '## Acao criada com sucesso',
+            '## Central de acoes',
+            'Acao criada com sucesso.',
             `A nova acao foi publicada em ${channelId ? `<#${channelId}>` : 'este canal'}.`,
             'Voce pode fechar esta mensagem.',
           ].join('\n')

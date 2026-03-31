@@ -209,8 +209,8 @@ function criarPainel() {
         .addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
             [
-              '## Painel para Membros',
-              'Selecione abaixo as opcoes disponiveis para consultar farm ou registrar lavagem.',
+              '## Central VSYNC',
+              'Acesse os fluxos principais da faccao em um unico painel.',
             ].join('\n')
           )
         )
@@ -222,11 +222,11 @@ function criarPainel() {
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         [
-          '**Meta de Farm**',
+          '**Consultas**',
           'Verifique como esta o andamento do seu farm semanal.',
           '',
-          '**Registro**',
-          'Notifique suas lavagens e peca para a gerencia aprovar sua lavagem.',
+          '**Registros**',
+          'Envie pedidos de lavagem e acompanhe a aprovacao da gerencia.',
         ].join('\n')
       )
     )
