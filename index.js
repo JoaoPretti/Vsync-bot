@@ -142,7 +142,7 @@ async function atualizarCampoAcao(acaoId, campo, valor) {
   ]);
 
   if (!camposPermitidos.has(campo)) {
-    throw new Error(`Campo nao permitido para atualizacao de acao: ${campo}`);
+    throw new Error(`Campo não permitido para atualização de ação: ${campo}`);
   }
 
   return repositories.atualizarCampoAcao(acaoId, campo, valor);
@@ -208,7 +208,7 @@ function criarPainel() {
       new SectionBuilder()
         .addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            ['## Central VSYNC', 'Acesse os fluxos principais da faccao em um unico painel.'].join(
+            ['## Central VSYNC', 'Acesse os fluxos principais da facção em um único painel.'].join(
               '\n'
             )
           )
@@ -221,11 +221,11 @@ function criarPainel() {
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         [
-          '**Fluxos disponiveis**',
-          'Verifique como esta o andamento do seu farm semanal.',
+          '**Fluxos disponíveis**',
+          'Verifique como está o andamento do seu farm semanal.',
           '',
-          '**Registros da faccao**',
-          'Envie pedidos de lavagem e acompanhe a aprovacao da gerencia.',
+          '**Registros da facção**',
+          'Envie pedidos de lavagem e acompanhe a aprovação da gerência.',
         ].join('\n')
       )
     )
@@ -249,7 +249,7 @@ async function publicarOuAtualizarPainelPrincipal() {
   const canal = await client.channels.fetch(PAINEL_PRINCIPAL_CANAL_ID).catch(() => null);
 
   if (!canal || canal.type !== ChannelType.GuildText) {
-    console.error('Canal do painel principal nao encontrado ou invalido.');
+    console.error('Canal do painel principal não encontrado ou inválido.');
     return;
   }
 
@@ -285,7 +285,7 @@ async function publicarOuAtualizarPainelAcoes() {
   const canal = await client.channels.fetch(PAINEL_ACOES_CANAL_ID).catch(() => null);
 
   if (!canal || canal.type !== ChannelType.GuildText) {
-    console.error('Canal do painel de acoes nao encontrado ou invalido.');
+    console.error('Canal do painel de ações não encontrado ou inválido.');
     return;
   }
 
@@ -321,7 +321,7 @@ async function publicarOuAtualizarPainelCadastro() {
   const canal = await client.channels.fetch(PAINEL_CADASTRO_CANAL_ID).catch(() => null);
 
   if (!canal || canal.type !== ChannelType.GuildText) {
-    console.error('Canal do painel de cadastro nao encontrado ou invalido.');
+    console.error('Canal do painel de cadastro não encontrado ou inválido.');
     return;
   }
 
@@ -379,7 +379,7 @@ async function finalizarAcao(interaction, acaoId) {
 
   if (!acao) {
     return interaction.reply({
-      content: 'Nao encontrei essa acao.',
+      content: 'Não encontrei essa ação.',
       ephemeral: true,
     });
   }
@@ -388,21 +388,21 @@ async function finalizarAcao(interaction, acaoId) {
 
   if (!acao.nome_acao || !acao.tipo_acao || !acao.resultado) {
     return interaction.reply({
-      content: 'Defina a acao, o tipo e o resultado antes de finalizar.',
+      content: 'Defina a ação, o tipo e o resultado antes de finalizar.',
       ephemeral: true,
     });
   }
 
   if (!acao.comando_texto) {
     return interaction.reply({
-      content: 'E necessario que alguem assuma o comando da acao antes de finalizar.',
+      content: 'É necessário que alguém assuma o comando da ação antes de finalizar.',
       ephemeral: true,
     });
   }
 
   if (!participantes.length) {
     return interaction.reply({
-      content: 'E necessario ter ao menos um participante confirmado para finalizar.',
+      content: 'É necessário ter ao menos um participante confirmado para finalizar.',
       ephemeral: true,
     });
   }
@@ -415,7 +415,7 @@ async function finalizarAcao(interaction, acaoId) {
 
   if (!canalLog || canalLog.type !== ChannelType.GuildText) {
     return interaction.reply({
-      content: 'Nao encontrei o canal de log de acoes configurado.',
+      content: 'Não encontrei o canal de log de ações configurado.',
       ephemeral: true,
     });
   }
@@ -433,14 +433,14 @@ async function finalizarAcao(interaction, acaoId) {
 
       if (mensagemAcao) {
         await mensagemAcao.delete().catch((error) => {
-          console.error(`Nao foi possivel apagar a mensagem da acao #${acaoId}:`, error);
+          console.error(`Não foi possível apagar a mensagem da ação #${acaoId}:`, error);
         });
       }
     }
   }
 
   return interaction.reply({
-    content: 'Acao finalizada e log registrado com sucesso.',
+      content: 'Ação finalizada e log registrado com sucesso.',
     ephemeral: true,
   });
 }
@@ -469,7 +469,7 @@ async function processarRelatorioSemanal() {
     await resetarFarmUsuario(usuario.usuario_id);
   }
 
-  console.log(`Relatorio semanal processado em ${new Date().toISOString()}`);
+  console.log(`Relatório semanal processado em ${new Date().toISOString()}`);
 }
 
 async function moverCanalPrivadoParaCategoriaSaida(guild, canalId) {
@@ -516,13 +516,13 @@ client.once('clientReady', () => {
   });
 
   publicarOuAtualizarPainelAcoes().catch((error) => {
-    console.error('Erro ao publicar o painel de acoes persistente:', error);
+    console.error('Erro ao publicar o painel de ações persistente:', error);
   });
 });
 
 client.on('guildMemberRemove', async (member) => {
   try {
-    console.log(`[guildMemberRemove] Saida detectada: ${member.user.tag} (${member.id})`);
+    console.log(`[guildMemberRemove] Saída detectada: ${member.user.tag} (${member.id})`);
 
     const cadastroUsuario = await buscarCadastroPorUsuario(member.id);
 
@@ -546,7 +546,7 @@ client.on('guildMemberRemove', async (member) => {
       cadastroUsuario.canal_id
     ).catch((error) => {
       console.error(
-        `[guildMemberRemove] Falha ao mover o canal privado ${cadastroUsuario.canal_id} de ${member.user.tag} (${member.id}) para a categoria de saida:`,
+        `[guildMemberRemove] Falha ao mover o canal privado ${cadastroUsuario.canal_id} de ${member.user.tag} (${member.id}) para a categoria de saída:`,
         error
       );
       return false;
@@ -554,11 +554,11 @@ client.on('guildMemberRemove', async (member) => {
 
     if (canalMovido) {
       console.log(
-        `[guildMemberRemove] Canal privado ${cadastroUsuario.canal_id} movido para a categoria de saida para ${member.user.tag} (${member.id}).`
+        `[guildMemberRemove] Canal privado ${cadastroUsuario.canal_id} movido para a categoria de saída para ${member.user.tag} (${member.id}).`
       );
     } else {
       console.log(
-        `[guildMemberRemove] Canal privado ${cadastroUsuario.canal_id} nao encontrado para ${member.user.tag} (${member.id}).`
+        `[guildMemberRemove] Canal privado ${cadastroUsuario.canal_id} não encontrado para ${member.user.tag} (${member.id}).`
       );
     }
   } catch (error) {
@@ -583,7 +583,7 @@ client.on('guildMemberAdd', async (member) => {
     }
 
     console.log(
-      `[guildMemberAdd] Cadastro encontrado para ${member.user.tag} (${member.id}). Reativando canal ${cadastroUsuario.canal_id || 'nao informado'}.`
+      `[guildMemberAdd] Cadastro encontrado para ${member.user.tag} (${member.id}). Reativando canal ${cadastroUsuario.canal_id || 'não informado'}.`
     );
 
     const resultadoCadastro = await aplicarCadastroUsuario(
@@ -663,10 +663,10 @@ async function startBot() {
   try {
     console.log('1. Iniciando bot...');
 
-    console.log('1.1 Validando variaveis de ambiente...');
+    console.log('1.1 Validando variáveis de ambiente...');
     validarEnvObrigatorias();
 
-    console.log('2. Testando conexao com banco...');
+    console.log('2. Testando conexão com banco...');
     const teste = await db.query('SELECT NOW() AS agora');
     console.log('3. Banco conectado:', teste.rows[0]);
 

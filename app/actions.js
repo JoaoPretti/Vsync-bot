@@ -132,7 +132,7 @@ function criarSelectRascunhoAcoes(token, tamanho, valorAtual = null) {
       .addOptions(
         opcoes.length
           ? opcoes
-          : [{ label: 'Cadastre acoes em ACOES_DISPONIVEIS', value: 'indisponivel' }]
+          : [{ label: 'Cadastre ações em ACOES_DISPONIVEIS', value: 'indisponivel' }]
       )
       .setDisabled(opcoes.length === 0)
   );
@@ -234,7 +234,7 @@ function criarPainelAcoes() {
       new SectionBuilder()
         .addTextDisplayComponents(
           criarTexto(
-            ['## Central de acoes', 'Selecione o porte e siga o fluxo da ação neste painel.'].join(
+            ['## Central de ações', 'Selecione o porte e siga o fluxo da ação neste painel.'].join(
               '\n'
             )
           )
@@ -283,7 +283,7 @@ function criarContainerRascunhoAcao(rascunho, formatarMoeda, aviso = null) {
         .addTextDisplayComponents(
           criarTexto(
             [
-              '## Central de acoes',
+              '## Central de ações',
               'Preencha o rascunho da ação e publique quando tudo estiver pronto.',
             ].join('\n')
           )
@@ -296,11 +296,11 @@ function criarContainerRascunhoAcao(rascunho, formatarMoeda, aviso = null) {
         [
           '**Resumo da ação**',
           `Modelo: ${obterLabelTamanhoAcao(rascunho.tamanho)}`,
-          `Tipo da acao: ${rascunho.nomeAcao || 'Nao selecionada'}`,
-          `Estilo: ${rascunho.tipoAcao || 'Nao selecionado'}`,
-          `Participantes: ${rascunho.quantidadeParticipantes ?? 'Nao informado'}`,
+          `Tipo da ação: ${rascunho.nomeAcao || 'Não selecionada'}`,
+          `Estilo: ${rascunho.tipoAcao || 'Não selecionado'}`,
+          `Participantes: ${rascunho.quantidadeParticipantes ?? 'Não informado'}`,
           `Dinheiro coletado: ${
-            rascunho.dinheiro ? formatarMoeda(rascunho.dinheiro) : 'Nao informado'
+            rascunho.dinheiro ? formatarMoeda(rascunho.dinheiro) : 'Não informado'
           }`,
         ].join('\n')
       )
@@ -309,12 +309,12 @@ function criarContainerRascunhoAcao(rascunho, formatarMoeda, aviso = null) {
     .addTextDisplayComponents(
       criarTexto(
         [
-          `**Andamento da central: ${pronto ? '3/3 - Confirmacao' : '2/3 - Configuracao'}**`,
+          `**Andamento da central: ${pronto ? '3/3 - Confirmação' : '2/3 - Configuração'}**`,
           pronto
-            ? 'Tudo pronto para publicar. Revise os dados e use o botao final.'
-            : 'Use os menus e o botao de detalhes logo abaixo para concluir a configuracao.',
+            ? 'Tudo pronto para publicar. Revise os dados e use o botão final.'
+            : 'Use os menus e o botão de detalhes logo abaixo para concluir a configuração.',
           `Criado por: <@${rascunho.userId}>`,
-          `Status: ${pronto ? 'Pronto para publicar' : 'Em configuracao'}`,
+          `Status: ${pronto ? 'Pronto para publicar' : 'Em configuração'}`,
         ].join('\n')
       )
     )
@@ -379,7 +379,7 @@ function criarContainerMensagemAcao(acao, participantes, formatarMoeda, desabili
 
   const totalAtual = participantes.length;
   const totalEsperado = acao.quantidade_participantes || 0;
-  const etapaAtual = acao.resultado ? '3/3 - Finalizacao' : '2/3 - Participacao';
+  const etapaAtual = acao.resultado ? '3/3 - Finalização' : '2/3 - Participação';
 
   return criarContainerBase()
     .addSectionComponents(
@@ -387,7 +387,7 @@ function criarContainerMensagemAcao(acao, participantes, formatarMoeda, desabili
         .addTextDisplayComponents(
           criarTexto(
             [
-              '## Central de acoes',
+              '## Central de ações',
               `Acompanhe ${acao.nome_acao || obterLabelTamanhoAcao(acao.tamanho)} em tempo real nesta central.`,
             ].join('\n')
           )
@@ -400,8 +400,8 @@ function criarContainerMensagemAcao(acao, participantes, formatarMoeda, desabili
         [
           '**Resumo da ação**',
           `Modelo: ${obterLabelTamanhoAcao(acao.tamanho)}`,
-          `Tipo da acao: ${acao.nome_acao || 'Nao definido'}`,
-          `Estilo: ${acao.tipo_acao || 'Nao definido'}`,
+          `Tipo da ação: ${acao.nome_acao || 'Não definido'}`,
+          `Estilo: ${acao.tipo_acao || 'Não definido'}`,
           `Participantes: ${totalAtual}/${totalEsperado}`,
           `Dinheiro coletado: ${formatarMoeda(acao.dinheiro)}`,
         ].join('\n')
@@ -414,7 +414,7 @@ function criarContainerMensagemAcao(acao, participantes, formatarMoeda, desabili
       criarTexto(
         [
           `**Controle da central: ${etapaAtual}**`,
-          `Comando atual: ${acao.comando_texto || 'Ninguem assumiu o comando ainda'}`,
+          `Comando atual: ${acao.comando_texto || 'Ninguém assumiu o comando ainda'}`,
           `Resultado: ${acao.resultado || 'Em andamento'}`,
           `Abertura: <t:${Math.floor(new Date(acao.iniciado_em).getTime() / 1000)}:f>`,
         ].join('\n')
@@ -444,10 +444,10 @@ function montarPayloadRascunhoConcluido(channelId) {
       criarContainerBase().addTextDisplayComponents(
         criarTexto(
           [
-            '## Central de acoes',
+            '## Central de ações',
             'Ação criada com sucesso.',
-            `A nova acao foi publicada em ${channelId ? `<#${channelId}>` : 'este canal'}.`,
-            'Voce pode fechar esta mensagem.',
+            `A nova ação foi publicada em ${channelId ? `<#${channelId}>` : 'este canal'}.`,
+            'Você pode fechar esta mensagem.',
           ].join('\n')
         )
       ),
@@ -468,7 +468,7 @@ function criarContainerLogAcao(acao, participantes, formatarMoeda) {
         .addTextDisplayComponents(
           criarTexto(
             [
-              '## Central de acoes',
+              '## Central de ações',
               `${acao.nome_acao || obterLabelTamanhoAcao(acao.tamanho)} finalizada e registrada com sucesso.`,
             ].join('\n')
           )
@@ -481,9 +481,9 @@ function criarContainerLogAcao(acao, participantes, formatarMoeda) {
         [
           '**Resumo da central**',
           `**Ação:** ${acao.nome_acao || obterLabelTamanhoAcao(acao.tamanho)}`,
-          `**Lideranca:** ${acao.comando_texto || 'Nao definida'}`,
-          `**Estilo:** ${acao.tipo_acao || 'Nao definido'}`,
-          `**Resultado:** ${acao.resultado || 'Nao definido'}`,
+          `**Liderança:** ${acao.comando_texto || 'Não definida'}`,
+          `**Estilo:** ${acao.tipo_acao || 'Não definido'}`,
+          `**Resultado:** ${acao.resultado || 'Não definido'}`,
           `**Participantes:** ${participantes.length}`,
           `**Valor total:** ${formatarMoeda(acao.dinheiro)}`,
           `**Valor por pessoa:** ${formatarMoeda(valorPorPessoa)}`,

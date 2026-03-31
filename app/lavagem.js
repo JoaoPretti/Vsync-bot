@@ -104,12 +104,12 @@ function criarBotoesAprovacaoLavagem(lavagemId, desabilitado = false) {
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`${LAVAGEM_APROVAR_PREFIX}${lavagemId}`)
-        .setLabel('Aprovar solicitacao')
+        .setLabel('Aprovar solicitação')
         .setStyle(ButtonStyle.Success)
         .setDisabled(desabilitado),
       new ButtonBuilder()
         .setCustomId(`${LAVAGEM_RECUSAR_PREFIX}${lavagemId}`)
-        .setLabel('Recusar solicitacao')
+        .setLabel('Recusar solicitação')
         .setStyle(ButtonStyle.Danger)
         .setDisabled(desabilitado)
     ),
@@ -206,7 +206,7 @@ function criarContainerRegistroLavagem(lavagem) {
           `**Usuario:** <@${lavagem.usuario_id}>`,
           `**Passaporte:** ${lavagem.personagem_id}`,
           `**Aprovado por:** ${
-            lavagem.aprovado_por_id ? `<@${lavagem.aprovado_por_id}>` : 'Nao informado'
+            lavagem.aprovado_por_id ? `<@${lavagem.aprovado_por_id}>` : 'Não informado'
           }`,
         ].join('\n')
       )
@@ -296,7 +296,7 @@ async function finalizarLavagem(interaction, lavagemId, acao, client) {
 
   if (!lavagem) {
     return interaction.reply({
-      content: 'Nao encontrei essa solicitacao de lavagem.',
+      content: 'Não encontrei essa solicitação de lavagem.',
       ephemeral: true,
     });
   }
@@ -326,8 +326,8 @@ async function finalizarLavagem(interaction, lavagemId, acao, client) {
       lavagemAtualizada,
       true,
       acao === 'aprovar'
-        ? `Solicitacao aprovada por <@${interaction.user.id}>.`
-        : `Solicitacao recusada por <@${interaction.user.id}>.`
+        ? `Solicitação aprovada por <@${interaction.user.id}>.`
+        : `Solicitação recusada por <@${interaction.user.id}>.`
     )
   );
 
@@ -335,7 +335,7 @@ async function finalizarLavagem(interaction, lavagemId, acao, client) {
     const canalRegistro = await client.channels.fetch(CANAL_REGISTRO_LAVAGEM_ID).catch(() => null);
 
     if (!canalRegistro || canalRegistro.type !== ChannelType.GuildText) {
-      throw new Error('Canal de registro de lavagem nao encontrado ou invalido.');
+      throw new Error('Canal de registro de lavagem não encontrado ou inválido.');
     }
 
     await canalRegistro.send(montarPayloadRegistroLavagem(lavagemAtualizada));

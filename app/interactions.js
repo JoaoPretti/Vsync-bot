@@ -47,7 +47,7 @@ function criarPayloadRegistroFarm({ item, quantidade, usuarioId, imagem, imagemE
           '**Resumo da central**',
           `**Item:** ${item}`,
           `**Quantidade:** ${quantidade}`,
-          `**Usuario:** <@${usuarioId}>`,
+          `**Usuário:** <@${usuarioId}>`,
           `**Comprovante:** ${imagemEmbed ? `[Abrir imagem](${imagemEmbed})` : imagem}`,
         ].join('\n')
       )
@@ -72,7 +72,7 @@ function criarPayloadRelatorioSemanal(relatorios, usuarioId) {
       new SectionBuilder()
         .addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            ['## Central de farm', 'Acompanhe abaixo o seu historico semanal de registros.'].join(
+            ['## Central de farm', 'Acompanhe abaixo o seu histórico semanal de registros.'].join(
               '\n'
             )
           )
@@ -84,7 +84,7 @@ function criarPayloadRelatorioSemanal(relatorios, usuarioId) {
     .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        ['**Resumo da central**', `**Usuario:** <@${usuarioId}>`, descricao.slice(0, 3800)].join(
+        ['**Resumo da central**', `**Usuário:** <@${usuarioId}>`, descricao.slice(0, 3800)].join(
           '\n'
         )
       )
@@ -107,7 +107,7 @@ function criarPayloadRelatorioGlobal(dados, totalGeral) {
       new SectionBuilder()
         .addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            ['## Central de farm', 'Confira o consolidado semanal de registros da faccao.'].join(
+            ['## Central de farm', 'Confira o consolidado semanal de registros da facção.'].join(
               '\n'
             )
           )
@@ -157,7 +157,7 @@ function criarPayloadResumoFarm(agrupado, registros, usuarioId) {
       new TextDisplayBuilder().setContent(
         [
           '**Resumo da central**',
-          `**Usuario:** <@${usuarioId}>`,
+          `**Usuário:** <@${usuarioId}>`,
           `**Total de registros:** ${registros.length}`,
           `**Quantidade total:** ${totalQuantidade}`,
           descricao.slice(0, 3600),
@@ -191,7 +191,7 @@ async function processarComando(interaction, context) {
   if (interaction.commandName === 'painel_acoes') {
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
       return interaction.reply({
-        content: 'Voce nao tem permissao para publicar o painel de acoes.',
+        content: 'Você não tem permissão para publicar o painel de ações.',
         ephemeral: true,
       });
     }
@@ -199,7 +199,7 @@ async function processarComando(interaction, context) {
     await publicarOuAtualizarPainelAcoes();
 
     return interaction.reply({
-      content: `Painel de acoes sincronizado no canal <#${PAINEL_ACOES_CANAL_ID}>.`,
+      content: `Painel de ações sincronizado no canal <#${PAINEL_ACOES_CANAL_ID}>.`,
       ephemeral: true,
     });
   }
@@ -207,7 +207,7 @@ async function processarComando(interaction, context) {
   if (interaction.commandName === 'painel_cadastro') {
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
       return interaction.reply({
-        content: 'Voce nao tem permissao para publicar o painel de cadastro.',
+        content: 'Você não tem permissão para publicar o painel de cadastro.',
         ephemeral: true,
       });
     }
@@ -224,7 +224,7 @@ async function processarComando(interaction, context) {
   if (interaction.commandName === 'editar_cadastro') {
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
       return interaction.reply({
-        content: 'Voce nao tem permissao para editar cadastros.',
+        content: 'Você não tem permissão para editar cadastros.',
         ephemeral: true,
       });
     }
@@ -236,7 +236,7 @@ async function processarComando(interaction, context) {
 
     if (!cadastroAtual) {
       return interaction.reply({
-        content: 'Esse usuario ainda nao possui cadastro.',
+        content: 'Esse usuário ainda não possui cadastro.',
         ephemeral: true,
       });
     }
@@ -255,7 +255,7 @@ async function processarComando(interaction, context) {
       );
     } catch (error) {
       return interaction.editReply({
-        content: error.message || 'Nao foi possivel editar o cadastro.',
+        content: error.message || 'Não foi possível editar o cadastro.',
       });
     }
 
@@ -282,7 +282,7 @@ async function processarComando(interaction, context) {
 
     if (foto && foto.contentType && !foto.contentType.startsWith('image/')) {
       return interaction.reply({
-        content: 'O arquivo enviado em foto precisa ser uma imagem valida.',
+        content: 'O arquivo enviado em foto precisa ser uma imagem válida.',
         ephemeral: true,
       });
     }
@@ -308,7 +308,7 @@ async function processarComando(interaction, context) {
 
     if (!canal) {
       return interaction.reply({
-        content: 'Nao encontrei o canal de registros.',
+        content: 'Não encontrei o canal de registros.',
         ephemeral: true,
       });
     }
@@ -319,7 +319,7 @@ async function processarComando(interaction, context) {
       canal.type !== ChannelType.PrivateThread
     ) {
       return interaction.reply({
-        content: 'O canal configurado nao e um canal de texto valido.',
+        content: 'O canal configurado não é um canal de texto válido.',
         ephemeral: true,
       });
     }
@@ -377,7 +377,7 @@ async function processarComando(interaction, context) {
 
     if (!relatorios.length) {
       return interaction.reply({
-        content: 'Voce nao possui relatorios ainda.',
+        content: 'Você não possui relatórios ainda.',
         ephemeral: true,
       });
     }
@@ -404,7 +404,7 @@ async function processarComando(interaction, context) {
     await processarRelatorioSemanal();
 
     return interaction.reply({
-      content: 'Relatorio semanal executado manualmente para teste.',
+      content: 'Relatório semanal executado manualmente para teste.',
       ephemeral: true,
     });
   }
@@ -440,7 +440,7 @@ async function processarModal(interaction, context) {
 
     if (!rascunho) {
       return interaction.reply({
-        content: 'Esse rascunho de acao expirou ou nao pertence a voce.',
+        content: 'Esse rascunho de ação expirou ou não pertence a você.',
         ephemeral: true,
       });
     }
@@ -452,14 +452,14 @@ async function processarModal(interaction, context) {
 
     if (!/^\d+$/.test(quantidadeParticipantesTexto) || Number(quantidadeParticipantesTexto) <= 0) {
       return interaction.reply({
-        content: 'A quantidade de participantes deve ser um numero inteiro maior que zero.',
+        content: 'A quantidade de participantes deve ser um número inteiro maior que zero.',
         ephemeral: true,
       });
     }
 
     if (!/^\d+$/.test(dinheiroTexto) || Number(dinheiroTexto) <= 0) {
       return interaction.reply({
-        content: 'O valor em dinheiro deve ser um numero inteiro maior que zero.',
+        content: 'O valor em dinheiro deve ser um número inteiro maior que zero.',
         ephemeral: true,
       });
     }
@@ -470,7 +470,7 @@ async function processarModal(interaction, context) {
     return interaction.reply(
       montarPayloadRascunhoAcao(rascunho, formatarMoeda, {
         ephemeral: true,
-        aviso: 'Detalhes atualizados. Revise o painel abaixo para concluir a criacao da acao.',
+        aviso: 'Detalhes atualizados. Revise o painel abaixo para concluir a criação da ação.',
       })
     );
   }
@@ -559,7 +559,7 @@ async function processarBotao(interaction, context) {
     await adicionarParticipanteAcao(acaoId, interaction.user);
     await renderizarMensagemAcao(interaction, acaoId);
     return interaction.reply({
-      content: 'Voce entrou na acao.',
+      content: 'Você entrou na ação.',
       ephemeral: true,
     });
   }
@@ -576,7 +576,7 @@ async function processarBotao(interaction, context) {
 
     await renderizarMensagemAcao(interaction, acaoId);
     return interaction.reply({
-      content: 'Voce saiu da acao.',
+      content: 'Você saiu da ação.',
       ephemeral: true,
     });
   }
@@ -587,7 +587,7 @@ async function processarBotao(interaction, context) {
     await atualizarCampoAcao(acaoId, 'comando_texto', `<@${interaction.user.id}>`);
     await renderizarMensagemAcao(interaction, acaoId);
     return interaction.reply({
-      content: 'Voce assumiu o comando da acao.',
+      content: 'Você assumiu o comando da ação.',
       ephemeral: true,
     });
   }
@@ -603,7 +603,7 @@ async function processarBotao(interaction, context) {
 
     if (!rascunho) {
       return interaction.reply({
-        content: 'Esse rascunho de acao expirou ou nao pertence a voce.',
+        content: 'Esse rascunho de ação expirou ou não pertence a você.',
         ephemeral: true,
       });
     }
@@ -617,7 +617,7 @@ async function processarBotao(interaction, context) {
 
     if (!rascunho) {
       return interaction.reply({
-        content: 'Esse rascunho de acao expirou ou nao pertence a voce.',
+        content: 'Esse rascunho de ação expirou ou não pertence a você.',
         ephemeral: true,
       });
     }
@@ -625,7 +625,7 @@ async function processarBotao(interaction, context) {
     if (!rascunhoAcaoEstaPronto(rascunho)) {
       return interaction.reply({
         content:
-          'Defina a acao, o tipo, a quantidade de participantes e o dinheiro antes de criar.',
+          'Defina a ação, o tipo, a quantidade de participantes e o dinheiro antes de criar.',
         ephemeral: true,
       });
     }
@@ -660,7 +660,7 @@ async function processarBotao(interaction, context) {
 
     if (!registros.length) {
       return interaction.reply({
-        content: 'Voce ainda nao possui farms registrados.',
+        content: 'Você ainda não possui farms registrados.',
         ephemeral: true,
       });
     }
@@ -707,14 +707,14 @@ async function processarSelect(interaction, context) {
 
     if (!rascunho) {
       return interaction.reply({
-        content: 'Esse rascunho de acao expirou ou nao pertence a voce.',
+        content: 'Esse rascunho de ação expirou ou não pertence a você.',
         ephemeral: true,
       });
     }
 
     if (nomeAcao === 'indisponivel') {
       return interaction.reply({
-        content: 'Cadastre acoes em ACOES_DISPONIVEIS antes de usar esta lista.',
+        content: 'Cadastre ações em ACOES_DISPONIVEIS antes de usar esta lista.',
         ephemeral: true,
       });
     }
@@ -731,7 +731,7 @@ async function processarSelect(interaction, context) {
 
     if (!rascunho) {
       return interaction.reply({
-        content: 'Esse rascunho de acao expirou ou nao pertence a voce.',
+        content: 'Esse rascunho de ação expirou ou não pertence a você.',
         ephemeral: true,
       });
     }
@@ -773,11 +773,11 @@ async function processarInteracao(interaction, context) {
       return processarSelect(interaction, context);
     }
   } catch (error) {
-    console.error('Erro na interacao:', error);
+    console.error('Erro na interação:', error);
 
     if (!interaction.replied && !interaction.deferred) {
       return interaction.reply({
-        content: 'Ocorreu um erro ao processar esta acao.',
+        content: 'Ocorreu um erro ao processar esta ação.',
         ephemeral: true,
       });
     }
