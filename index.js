@@ -277,6 +277,8 @@ async function publicarOuAtualizarPainelAcoes() {
   );
 
   const payload = {
+    content: painel.content,
+    embeds: painel.embeds,
     flags: painel.flags,
     components: painel.components,
   };
