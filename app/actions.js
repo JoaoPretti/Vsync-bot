@@ -3,7 +3,6 @@ const {
   ButtonBuilder,
   ButtonStyle,
   ContainerBuilder,
-  EmbedBuilder,
   MessageFlags,
   ModalBuilder,
   SectionBuilder,
@@ -293,45 +292,80 @@ function criarPainelAcoes() {
   };
 }
 
-function criarEmbedRascunhoAcao(rascunho, formatarMoeda) {
-  const pronto = rascunhoAcaoEstaPronto(rascunho);
-
-  return new EmbedBuilder()
-    .setColor(0x2f3136)
-    .setTitle('Painel interativo de acao')
-    .setDescription(
-      [
-        '**Resumo atual**',
-        `Modelo: ${obterLabelTamanhoAcao(rascunho.tamanho)}`,
-        `Tipo da acao: ${rascunho.nomeAcao || 'Nao selecionada'}`,
-        `Estilo: ${rascunho.tipoAcao || 'Nao selecionado'}`,
-        `Participantes: ${rascunho.quantidadeParticipantes ?? 'Nao informado'}`,
-        `Dinheiro coletado: ${
-          rascunho.dinheiro ? formatarMoeda(rascunho.dinheiro) : 'Nao informado'
-        }`,
-        '',
-        `**Etapa atual: ${pronto ? '3/3 - Confirmacao' : '2/3 - Configuracao'}**`,
-        pronto
-          ? 'Tudo pronto para publicar. Revise as informacoes e clique em "Criar acao".'
-          : 'Use os menus abaixo e preencha os detalhes para concluir a configuracao.',
-        '',
-        `Criado por: <@${rascunho.userId}>`,
-        `Status: ${pronto ? 'Pronto para publicar' : 'Em configuracao'}`,
-      ].join('\n')
-    )
-    .setFooter({ text: `Rascunho ${obterLabelTamanhoAcao(rascunho.tamanho)}` })
-    .setTimestamp();
+function combinarFlags(...flags) {
+  return flags.reduce((total, flag) => total | flag, 0);
 }
 
-function montarPayloadRascunhoAcao(rascunho, formatarMoeda) {
+function criarContainerRascunhoAcao(rascunho, formatarMoeda, aviso = null) {
+  const pronto = rascunhoAcaoEstaPronto(rascunho);
+  const container = criarContainerBase();
+
+  if (aviso) {
+    container
+      .addTextDisplayComponents(criarTexto(`> ${aviso}`))
+      .addSeparatorComponents(criarSeparador());
+  }
+
+  return container
+    .addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents(
+          criarTexto(
+            [
+              '## Painel interativo de acao',
+              'Defina os dados abaixo para publicar a acao com o visual integrado.',
+            ].join('\n')
+          )
+        )
+        .setThumbnailAccessory(criarThumbnailPadrao())
+    )
+    .addSeparatorComponents(criarSeparador())
+    .addTextDisplayComponents(
+      criarTexto(
+        [
+          '**Resumo atual**',
+          `Modelo: ${obterLabelTamanhoAcao(rascunho.tamanho)}`,
+          `Tipo da acao: ${rascunho.nomeAcao || 'Nao selecionada'}`,
+          `Estilo: ${rascunho.tipoAcao || 'Nao selecionado'}`,
+          `Participantes: ${rascunho.quantidadeParticipantes ?? 'Nao informado'}`,
+          `Dinheiro coletado: ${
+            rascunho.dinheiro ? formatarMoeda(rascunho.dinheiro) : 'Nao informado'
+          }`,
+        ].join('\n')
+      )
+    )
+    .addSeparatorComponents(criarSeparador())
+    .addTextDisplayComponents(
+      criarTexto(
+        [
+          `**Etapa atual: ${pronto ? '3/3 - Confirmacao' : '2/3 - Configuracao'}**`,
+          pronto
+            ? 'Tudo pronto para publicar. Revise os dados e use o botao final.'
+            : 'Use os menus e o botao de detalhes logo abaixo para concluir a configuracao.',
+          `Criado por: <@${rascunho.userId}>`,
+          `Status: ${pronto ? 'Pronto para publicar' : 'Em configuracao'}`,
+        ].join('\n')
+      )
+    )
+    .addSeparatorComponents(criarSeparador())
+    .addActionRowComponents(criarAbasPainelRascunho(pronto))
+    .addActionRowComponents(
+      criarSelectRascunhoAcoes(rascunho.token, rascunho.tamanho, rascunho.nomeAcao)
+    )
+    .addActionRowComponents(criarSelectRascunhoTipo(rascunho.token, rascunho.tipoAcao))
+    .addActionRowComponents(criarBotoesRascunhoAcao(rascunho.token, pronto));
+}
+
+function montarPayloadRascunhoAcao(rascunho, formatarMoeda, options = {}) {
+  const { ephemeral = false, aviso = null } = options;
+
   return {
-    embeds: [criarEmbedRascunhoAcao(rascunho, formatarMoeda)],
-    components: [
-      criarAbasPainelRascunho(rascunhoAcaoEstaPronto(rascunho)),
-      criarSelectRascunhoAcoes(rascunho.token, rascunho.tamanho, rascunho.nomeAcao),
-      criarSelectRascunhoTipo(rascunho.token, rascunho.tipoAcao),
-      criarBotoesRascunhoAcao(rascunho.token, rascunhoAcaoEstaPronto(rascunho)),
-    ],
+    content: null,
+    embeds: [],
+    flags: ephemeral
+      ? combinarFlags(MessageFlags.Ephemeral, MessageFlags.IsComponentsV2)
+      : MessageFlags.IsComponentsV2,
+    components: [criarContainerRascunhoAcao(rascunho, formatarMoeda, aviso)],
   };
 }
 

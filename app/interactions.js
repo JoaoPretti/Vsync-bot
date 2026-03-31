@@ -33,7 +33,7 @@ async function processarComando(interaction, context) {
   if (interaction.commandName === 'painel_acoes') {
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
       return interaction.reply({
-        content: 'Você não tem permissão para publicar o painel de ações.',
+        content: 'Voce nao tem permissao para publicar o painel de acoes.',
         ephemeral: true,
       });
     }
@@ -41,7 +41,7 @@ async function processarComando(interaction, context) {
     await publicarOuAtualizarPainelAcoes();
 
     return interaction.reply({
-      content: `Painel de ações sincronizado no canal <#${PAINEL_ACOES_CANAL_ID}>.`,
+      content: `Painel de acoes sincronizado no canal <#${PAINEL_ACOES_CANAL_ID}>.`,
       ephemeral: true,
     });
   }
@@ -49,7 +49,7 @@ async function processarComando(interaction, context) {
   if (interaction.commandName === 'painel_cadastro') {
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
       return interaction.reply({
-        content: 'Você não tem permissão para publicar o painel de cadastro.',
+        content: 'Voce nao tem permissao para publicar o painel de cadastro.',
         ephemeral: true,
       });
     }
@@ -72,7 +72,7 @@ async function processarComando(interaction, context) {
   if (interaction.commandName === 'editar_cadastro') {
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
       return interaction.reply({
-        content: 'Você não tem permissão para editar cadastros.',
+        content: 'Voce nao tem permissao para editar cadastros.',
         ephemeral: true,
       });
     }
@@ -84,7 +84,7 @@ async function processarComando(interaction, context) {
 
     if (!cadastroAtual) {
       return interaction.reply({
-        content: 'Esse usuário ainda não possui cadastro.',
+        content: 'Esse usuario ainda nao possui cadastro.',
         ephemeral: true,
       });
     }
@@ -103,7 +103,7 @@ async function processarComando(interaction, context) {
       );
     } catch (error) {
       return interaction.editReply({
-        content: error.message || 'Não foi possível editar o cadastro.',
+        content: error.message || 'Nao foi possivel editar o cadastro.',
       });
     }
 
@@ -130,14 +130,14 @@ async function processarComando(interaction, context) {
 
     if (foto && foto.contentType && !foto.contentType.startsWith('image/')) {
       return interaction.reply({
-        content: 'O arquivo enviado em foto precisa ser uma imagem válida.',
+        content: 'O arquivo enviado em foto precisa ser uma imagem valida.',
         ephemeral: true,
       });
     }
 
     if (link && !/^https?:\/\//i.test(link)) {
       return interaction.reply({
-        content: 'O link informado para a imagem precisa começar com http:// ou https://.',
+        content: 'O link informado para a imagem precisa comecar com http:// ou https://.',
         ephemeral: true,
       });
     }
@@ -156,7 +156,7 @@ async function processarComando(interaction, context) {
 
     if (!canal) {
       return interaction.reply({
-        content: 'Não encontrei o canal de registros.',
+        content: 'Nao encontrei o canal de registros.',
         ephemeral: true,
       });
     }
@@ -167,7 +167,7 @@ async function processarComando(interaction, context) {
       canal.type !== ChannelType.PrivateThread
     ) {
       return interaction.reply({
-        content: 'O canal configurado não é um canal de texto válido.',
+        content: 'O canal configurado nao e um canal de texto valido.',
         ephemeral: true,
       });
     }
@@ -175,11 +175,11 @@ async function processarComando(interaction, context) {
     const imagemEmbed = foto?.url ? foto.url : await resolverUrlImagem(link);
 
     const embed = new EmbedBuilder()
-      .setTitle('📦 Novo registro de farm')
+      .setTitle('Novo registro de farm')
       .addFields(
         { name: 'Item', value: item, inline: true },
         { name: 'Quantidade', value: String(quantidade), inline: true },
-        { name: 'Usuário', value: `<@${interaction.user.id}>`, inline: false },
+        { name: 'Usuario', value: `<@${interaction.user.id}>`, inline: false },
         { name: 'Imagem', value: imagem, inline: false }
       )
       .setTimestamp();
@@ -221,7 +221,7 @@ async function processarComando(interaction, context) {
     });
 
     return interaction.reply({
-      content: '✅ Farm registrado com sucesso.',
+      content: 'Farm registrado com sucesso.',
       ephemeral: true,
     });
   }
@@ -231,20 +231,20 @@ async function processarComando(interaction, context) {
 
     if (!relatorios.length) {
       return interaction.reply({
-        content: 'Você não possui relatórios ainda.',
+        content: 'Voce nao possui relatorios ainda.',
         ephemeral: true,
       });
     }
 
     const descricao = relatorios
-      .map((r) => `📆 **Semana:** ${r.semana_referencia}\n📦 **Total:** ${r.total_itens}`)
+      .map((r) => `Semana: ${r.semana_referencia}\nTotal: ${r.total_itens}`)
       .join('\n\n');
 
     const embed = new EmbedBuilder()
-      .setTitle('📊 Relatório Semanal')
+      .setTitle('Relatorio Semanal')
       .setDescription(descricao.slice(0, 4000))
       .addFields({
-        name: 'Usuário',
+        name: 'Usuario',
         value: `<@${interaction.user.id}>`,
         inline: false,
       })
@@ -266,11 +266,11 @@ async function processarComando(interaction, context) {
       });
     }
 
-    const descricao = dados.map((user) => `👤 <@${user.usuario_id}>: **${user.total}**`).join('\n');
+    const descricao = dados.map((user) => `<@${user.usuario_id}>: **${user.total}**`).join('\n');
     const totalGeral = dados.reduce((acc, user) => acc + user.total, 0);
 
     const embed = new EmbedBuilder()
-      .setTitle('📊 Relatório Global da Semana')
+      .setTitle('Relatorio Global da Semana')
       .setDescription(descricao)
       .addFields({
         name: 'Total Geral',
@@ -289,7 +289,7 @@ async function processarComando(interaction, context) {
     await processarRelatorioSemanal();
 
     return interaction.reply({
-      content: '✅ Relatório semanal executado manualmente para teste.',
+      content: 'Relatorio semanal executado manualmente para teste.',
       ephemeral: true,
     });
   }
@@ -325,7 +325,7 @@ async function processarModal(interaction, context) {
 
     if (!rascunho) {
       return interaction.reply({
-        content: 'Esse rascunho de ação expirou ou não pertence a você.',
+        content: 'Esse rascunho de acao expirou ou nao pertence a voce.',
         ephemeral: true,
       });
     }
@@ -337,14 +337,14 @@ async function processarModal(interaction, context) {
 
     if (!/^\d+$/.test(quantidadeParticipantesTexto) || Number(quantidadeParticipantesTexto) <= 0) {
       return interaction.reply({
-        content: 'A quantidade de participantes deve ser um número inteiro maior que zero.',
+        content: 'A quantidade de participantes deve ser um numero inteiro maior que zero.',
         ephemeral: true,
       });
     }
 
     if (!/^\d+$/.test(dinheiroTexto) || Number(dinheiroTexto) <= 0) {
       return interaction.reply({
-        content: 'O valor em dinheiro deve ser um número inteiro maior que zero.',
+        content: 'O valor em dinheiro deve ser um numero inteiro maior que zero.',
         ephemeral: true,
       });
     }
@@ -352,11 +352,12 @@ async function processarModal(interaction, context) {
     rascunho.quantidadeParticipantes = Number(quantidadeParticipantesTexto);
     rascunho.dinheiro = Number(dinheiroTexto);
 
-    return interaction.reply({
-      content: 'Detalhes atualizados. Use o painel abaixo para concluir a criação da ação.',
-      ephemeral: true,
-      ...montarPayloadRascunhoAcao(rascunho, formatarMoeda),
-    });
+    return interaction.reply(
+      montarPayloadRascunhoAcao(rascunho, formatarMoeda, {
+        ephemeral: true,
+        aviso: 'Detalhes atualizados. Revise o painel abaixo para concluir a criacao da acao.',
+      })
+    );
   }
 
   return null;
@@ -374,6 +375,7 @@ async function processarBotao(interaction, context) {
     finalizarAcao,
     finalizarLavagem,
     montarPayloadRascunhoAcao,
+    montarPayloadRascunhoConcluido,
     obterRascunhoAcao,
     removerParticipanteAcao,
     removerRascunhoAcao,
@@ -389,33 +391,33 @@ async function processarBotao(interaction, context) {
   }
 
   if (interaction.customId === 'acao_pequena') {
-    return interaction.reply({
-      ephemeral: true,
-      ...montarPayloadRascunhoAcao(
+    return interaction.reply(
+      montarPayloadRascunhoAcao(
         criarRascunhoAcao(interaction.user.id, interaction.channelId, 'pequena'),
-        formatarMoeda
-      ),
-    });
+        formatarMoeda,
+        { ephemeral: true }
+      )
+    );
   }
 
   if (interaction.customId === 'acao_media') {
-    return interaction.reply({
-      ephemeral: true,
-      ...montarPayloadRascunhoAcao(
+    return interaction.reply(
+      montarPayloadRascunhoAcao(
         criarRascunhoAcao(interaction.user.id, interaction.channelId, 'media'),
-        formatarMoeda
-      ),
-    });
+        formatarMoeda,
+        { ephemeral: true }
+      )
+    );
   }
 
   if (interaction.customId === 'acao_grande') {
-    return interaction.reply({
-      ephemeral: true,
-      ...montarPayloadRascunhoAcao(
+    return interaction.reply(
+      montarPayloadRascunhoAcao(
         criarRascunhoAcao(interaction.user.id, interaction.channelId, 'grande'),
-        formatarMoeda
-      ),
-    });
+        formatarMoeda,
+        { ephemeral: true }
+      )
+    );
   }
 
   if (interaction.customId === 'lavagem_parceria') {
@@ -441,7 +443,7 @@ async function processarBotao(interaction, context) {
     await adicionarParticipanteAcao(acaoId, interaction.user);
     await renderizarMensagemAcao(interaction, acaoId);
     return interaction.reply({
-      content: 'Você entrou na ação.',
+      content: 'Voce entrou na acao.',
       ephemeral: true,
     });
   }
@@ -451,7 +453,7 @@ async function processarBotao(interaction, context) {
     await removerParticipanteAcao(acaoId, interaction.user.id);
     await renderizarMensagemAcao(interaction, acaoId);
     return interaction.reply({
-      content: 'Você saiu da ação.',
+      content: 'Voce saiu da acao.',
       ephemeral: true,
     });
   }
@@ -462,7 +464,7 @@ async function processarBotao(interaction, context) {
     await atualizarCampoAcao(acaoId, 'comando_texto', `<@${interaction.user.id}>`);
     await renderizarMensagemAcao(interaction, acaoId);
     return interaction.reply({
-      content: 'Você assumiu o comando da ação.',
+      content: 'Voce assumiu o comando da acao.',
       ephemeral: true,
     });
   }
@@ -478,7 +480,7 @@ async function processarBotao(interaction, context) {
 
     if (!rascunho) {
       return interaction.reply({
-        content: 'Esse rascunho de ação expirou ou não pertence a você.',
+        content: 'Esse rascunho de acao expirou ou nao pertence a voce.',
         ephemeral: true,
       });
     }
@@ -492,7 +494,7 @@ async function processarBotao(interaction, context) {
 
     if (!rascunho) {
       return interaction.reply({
-        content: 'Esse rascunho de ação expirou ou não pertence a você.',
+        content: 'Esse rascunho de acao expirou ou nao pertence a voce.',
         ephemeral: true,
       });
     }
@@ -500,7 +502,7 @@ async function processarBotao(interaction, context) {
     if (!rascunhoAcaoEstaPronto(rascunho)) {
       return interaction.reply({
         content:
-          'Defina a ação, o tipo, a quantidade de participantes e o dinheiro antes de criar.',
+          'Defina a acao, o tipo, a quantidade de participantes e o dinheiro antes de criar.',
         ephemeral: true,
       });
     }
@@ -525,11 +527,9 @@ async function processarBotao(interaction, context) {
     const mensagem = await renderizarMensagemAcao(interaction, acao.id);
     removerRascunhoAcao(token);
 
-    return interaction.update({
-      content: `Ação criada com sucesso em ${mensagem ? `<#${interaction.channelId}>` : 'este canal'}.`,
-      embeds: [],
-      components: [],
-    });
+    return interaction.update(
+      montarPayloadRascunhoConcluido(mensagem ? interaction.channelId : null)
+    );
   }
 
   if (interaction.customId === 'farm' || interaction.customId === 'painel_farm') {
@@ -537,7 +537,7 @@ async function processarBotao(interaction, context) {
 
     if (!registros.length) {
       return interaction.reply({
-        content: 'Você ainda não possui farms registrados.',
+        content: 'Voce ainda nao possui farms registrados.',
         ephemeral: true,
       });
     }
@@ -556,16 +556,16 @@ async function processarBotao(interaction, context) {
     }
 
     const descricao = Object.entries(agrupado)
-      .map(([item, total]) => `📦 **${item}**: \`${total}\``)
+      .map(([item, total]) => `**${item}**: \`${total}\``)
       .join('\n');
 
     const totalQuantidade = Object.values(agrupado).reduce((acc, val) => acc + Number(val), 0);
 
     const embed = new EmbedBuilder()
-      .setTitle('📊 Seu Farm')
+      .setTitle('Seu Farm')
       .setDescription(descricao)
       .addFields(
-        { name: 'Usuário', value: `<@${interaction.user.id}>`, inline: false },
+        { name: 'Usuario', value: `<@${interaction.user.id}>`, inline: false },
         { name: 'Total de registros', value: String(registros.length), inline: true },
         { name: 'Quantidade total', value: String(totalQuantidade), inline: true }
       )
@@ -579,7 +579,7 @@ async function processarBotao(interaction, context) {
 
   if (interaction.customId === 'lavagem') {
     return interaction.reply({
-      content: '💰 Sistema de lavagem',
+      content: 'Sistema de lavagem',
       ephemeral: true,
     });
   }
@@ -603,14 +603,14 @@ async function processarSelect(interaction, context) {
 
     if (!rascunho) {
       return interaction.reply({
-        content: 'Esse rascunho de ação expirou ou não pertence a você.',
+        content: 'Esse rascunho de acao expirou ou nao pertence a voce.',
         ephemeral: true,
       });
     }
 
     if (nomeAcao === 'indisponivel') {
       return interaction.reply({
-        content: 'Cadastre ações em ACOES_DISPONIVEIS antes de usar esta lista.',
+        content: 'Cadastre acoes em ACOES_DISPONIVEIS antes de usar esta lista.',
         ephemeral: true,
       });
     }
@@ -627,7 +627,7 @@ async function processarSelect(interaction, context) {
 
     if (!rascunho) {
       return interaction.reply({
-        content: 'Esse rascunho de ação expirou ou não pertence a você.',
+        content: 'Esse rascunho de acao expirou ou nao pertence a voce.',
         ephemeral: true,
       });
     }
@@ -669,11 +669,11 @@ async function processarInteracao(interaction, context) {
       return processarSelect(interaction, context);
     }
   } catch (error) {
-    console.error('Erro na interação:', error);
+    console.error('Erro na interacao:', error);
 
     if (!interaction.replied && !interaction.deferred) {
       return interaction.reply({
-        content: 'Ocorreu um erro ao processar esta ação.',
+        content: 'Ocorreu um erro ao processar esta acao.',
         ephemeral: true,
       });
     }
