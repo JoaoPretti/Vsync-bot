@@ -1,6 +1,8 @@
 ﻿const {
   ChannelType,
   ContainerBuilder,
+  MediaGalleryBuilder,
+  MediaGalleryItemBuilder,
   MessageFlags,
   PermissionFlagsBits,
   SectionBuilder,
@@ -25,6 +27,7 @@ const {
 } = require('../config/constants');
 
 function criarPayloadRegistroFarm({ item, quantidade, usuarioId, imagem, imagemEmbed }) {
+  const comprovanteUrl = imagemEmbed || imagem;
   const container = new ContainerBuilder()
     .setAccentColor(0x2f3136)
     .addSectionComponents(
@@ -48,10 +51,22 @@ function criarPayloadRegistroFarm({ item, quantidade, usuarioId, imagem, imagemE
           `**Item:** ${item}`,
           `**Quantidade:** ${quantidade}`,
           `**Usuário:** <@${usuarioId}>`,
-          `**Comprovante:** ${imagemEmbed ? `[Abrir imagem](${imagemEmbed})` : imagem}`,
+          `**Comprovante:** ${comprovanteUrl ? `[Abrir imagem](${comprovanteUrl})` : 'Não informado'}`,
         ].join('\n')
       )
     );
+
+  if (comprovanteUrl) {
+    container
+      .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
+      .addMediaGalleryComponents(
+        new MediaGalleryBuilder().addItems(
+          new MediaGalleryItemBuilder()
+            .setURL(comprovanteUrl)
+            .setDescription(`Comprovante de farm enviado por <@${usuarioId}>`)
+        )
+      );
+  }
 
   return {
     content: null,
