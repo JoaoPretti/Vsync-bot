@@ -1,4 +1,4 @@
-const {
+﻿const {
   ChannelType,
   ContainerBuilder,
   MessageFlags,
@@ -289,7 +289,7 @@ async function processarComando(interaction, context) {
 
     if (link && !/^https?:\/\//i.test(link)) {
       return interaction.reply({
-        content: 'O link informado para a imagem precisa comecar com http:// ou https://.',
+        content: 'O link informado para a imagem precisa começar com http:// ou https://.',
         ephemeral: true,
       });
     }

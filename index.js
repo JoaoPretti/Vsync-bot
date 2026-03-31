@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 
 const cron = require('node-cron');
 const {
@@ -563,7 +563,7 @@ client.on('guildMemberRemove', async (member) => {
     }
   } catch (error) {
     console.error(
-      `[guildMemberRemove] Erro ao processar saida de ${member.user.tag} (${member.id}):`,
+      `[guildMemberRemove] Erro ao processar saída de ${member.user.tag} (${member.id}):`,
       error
     );
   }
