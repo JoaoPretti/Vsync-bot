@@ -29,13 +29,14 @@ const ACAO_RASCUNHO_CONFIRMAR_PREFIX = 'acao_rascunho_confirmar_';
 const ACAO_RASCUNHO_MODAL_PREFIX = 'modal_rascunho_acao_';
 const ACAO_RASCUNHO_TTL_MS = 30 * 60 * 1000;
 const TIPOS_ACAO = ['Tiro', 'Fuga', 'Arma Branca'];
+const PAINEL_DIVISOR = '------------------------------';
 
 const rascunhosAcao = new Map();
 
 function obterLabelTamanhoAcao(tamanho) {
-  if (tamanho === 'pequena') return 'Ação Pequena';
-  if (tamanho === 'media') return 'Ação Média';
-  return 'Ação Grande';
+  if (tamanho === 'pequena') return 'Acao Pequena';
+  if (tamanho === 'media') return 'Acao Media';
+  return 'Acao Grande';
 }
 
 function criarTokenRascunhoAcao(userId) {
@@ -92,33 +93,50 @@ function removerRascunhoAcao(token) {
 function rascunhoAcaoEstaPronto(rascunho) {
   return Boolean(
     rascunho?.nomeAcao &&
-    rascunho?.tipoAcao &&
-    Number.isInteger(rascunho?.quantidadeParticipantes) &&
-    rascunho.quantidadeParticipantes > 0 &&
-    Number.isInteger(rascunho?.dinheiro) &&
-    rascunho.dinheiro > 0
+      rascunho?.tipoAcao &&
+      Number.isInteger(rascunho?.quantidadeParticipantes) &&
+      rascunho.quantidadeParticipantes > 0 &&
+      Number.isInteger(rascunho?.dinheiro) &&
+      rascunho.dinheiro > 0
   );
 }
 
+function obterResumoRascunhoAcao(rascunho, formatarMoeda) {
+  return [
+    `Modelo: ${obterLabelTamanhoAcao(rascunho.tamanho)}`,
+    `Tipo da acao: ${rascunho.nomeAcao || 'Nao selecionada'}`,
+    `Estilo: ${rascunho.tipoAcao || 'Nao selecionado'}`,
+    `Participantes: ${rascunho.quantidadeParticipantes ?? 'Nao informado'}`,
+    `Dinheiro coletado: ${rascunho.dinheiro ? formatarMoeda(rascunho.dinheiro) : 'Nao informado'}`,
+  ];
+}
+
 function criarEmbedRascunhoAcao(rascunho, formatarMoeda) {
+  const pronto = rascunhoAcaoEstaPronto(rascunho);
+
   return new EmbedBuilder()
     .setColor(0x2f3136)
-    .setTitle(`Configurar ${obterLabelTamanhoAcao(rascunho.tamanho)}`)
+    .setTitle('Painel interativo de acao')
     .setDescription(
       [
-        'Defina os dados da ação antes de criar o embed definitivo.',
+        '**Resumo atual**',
+        ...obterResumoRascunhoAcao(rascunho, formatarMoeda),
         '',
-        `**Ação:** ${rascunho.nomeAcao || 'Não selecionada'}`,
-        `**Tipo:** ${rascunho.tipoAcao || 'Não selecionado'}`,
-        `**Qtd. Participantes:** ${rascunho.quantidadeParticipantes ?? 'Não informado'}`,
-        `**Dinheiro:** ${rascunho.dinheiro ? formatarMoeda(rascunho.dinheiro) : 'Não informado'}`,
+        PAINEL_DIVISOR,
         '',
-        rascunhoAcaoEstaPronto(rascunho)
-          ? 'Tudo pronto. Clique em "Criar Ação".'
-          : 'Selecione a ação, o tipo e informe os detalhes para continuar.',
+        `**Etapa atual: ${pronto ? '3/3 - Confirmacao' : '2/3 - Configuracao'}**`,
+        pronto
+          ? 'Tudo pronto para publicar. Revise as informacoes e clique em "Criar acao".'
+          : 'Use os menus abaixo e preencha os detalhes para concluir a configuracao.',
+        '',
+        PAINEL_DIVISOR,
+        '',
+        `Criado por: <@${rascunho.userId}>`,
+        `Status: ${pronto ? 'Pronto para publicar' : 'Em configuracao'}`,
       ].join('\n')
     )
-    .setFooter({ text: `Rascunho ${obterLabelTamanhoAcao(rascunho.tamanho)}` });
+    .setFooter({ text: `Rascunho ${obterLabelTamanhoAcao(rascunho.tamanho)}` })
+    .setTimestamp();
 }
 
 function criarSelectRascunhoAcoes(token, tamanho, valorAtual = null) {
@@ -131,11 +149,11 @@ function criarSelectRascunhoAcoes(token, tamanho, valorAtual = null) {
   return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId(`${ACAO_RASCUNHO_NOME_PREFIX}${token}`)
-      .setPlaceholder('Escolha a ação')
+      .setPlaceholder('Escolha o tipo de acao')
       .addOptions(
         opcoes.length
           ? opcoes
-          : [{ label: 'Cadastre ações em ACOES_DISPONIVEIS', value: 'indisponivel' }]
+          : [{ label: 'Cadastre acoes em ACOES_DISPONIVEIS', value: 'indisponivel' }]
       )
       .setDisabled(opcoes.length === 0)
   );
@@ -145,7 +163,7 @@ function criarSelectRascunhoTipo(token, valorAtual = null) {
   return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId(`${ACAO_RASCUNHO_TIPO_PREFIX}${token}`)
-      .setPlaceholder('Escolha o tipo da ação')
+      .setPlaceholder('Escolha o estilo da acao')
       .addOptions(
         ...TIPOS_ACAO.map((tipo) => ({
           label: tipo,
@@ -160,12 +178,12 @@ function criarBotoesRascunhoAcao(token, pronto = false) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`${ACAO_RASCUNHO_DETALHES_PREFIX}${token}`)
-      .setLabel('Informar Quantidade e Dinheiro')
-      .setStyle(ButtonStyle.Secondary),
+      .setLabel('Definir detalhes')
+      .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId(`${ACAO_RASCUNHO_CONFIRMAR_PREFIX}${token}`)
-      .setLabel('Criar Ação')
-      .setStyle(ButtonStyle.Success)
+      .setLabel('Criar acao')
+      .setStyle(ButtonStyle.Secondary)
       .setDisabled(!pronto)
   );
 }
@@ -184,7 +202,7 @@ function montarPayloadRascunhoAcao(rascunho, formatarMoeda) {
 function criarModalDetalhesRascunhoAcao(token, rascunho) {
   const modal = new ModalBuilder()
     .setCustomId(`${ACAO_RASCUNHO_MODAL_PREFIX}${token}`)
-    .setTitle(`Detalhes • ${obterLabelTamanhoAcao(rascunho.tamanho)}`);
+    .setTitle(`Detalhes - ${obterLabelTamanhoAcao(rascunho.tamanho)}`);
 
   const quantidadeInput = new TextInputBuilder()
     .setCustomId('quantidade_participantes')
@@ -224,22 +242,20 @@ function criarPainelAcoes(fs) {
   const possuiBannerLocal = fs.existsSync(ACOES_PAINEL_IMAGE_PATH);
   const embed = new EmbedBuilder()
     .setColor(0x2f3136)
-    .setTitle('Criar Relatório de Ação')
+    .setTitle('Criar relatorio de acao')
     .setDescription(
       [
-        'Este canal é destinado ao **registro de ações blipadas**.',
+        'Este canal e destinado ao registro de acoes blipadas.',
         '',
-        '━━━━━━━━━━━━━━━━━━',
-        '• Selecione o tipo de ação realizada no menu abaixo.',
-        '• Informe se a ação é no tiro, fuga ou arma branca.',
-        '• Solicite que todos os membros participantes confirmem sua participação.',
-        '• As informações serão registradas para fins de controle, estatística e histórico.',
+        PAINEL_DIVISOR,
         '',
-        '📌 Utilize este recurso sempre que houver qualquer tipo de ação blipada em andamento.',
+        'Selecione abaixo o porte da acao.',
+        'Depois, complete o painel interativo que sera aberto em seguida.',
+        'Os dados ficam organizados para controle, estatistica e historico.',
       ].join('\n')
     )
     .setThumbnail(CADASTRO_THUMBNAIL_URL)
-    .setFooter({ text: 'VSYNC • Painel de Ações' })
+    .setFooter({ text: 'VSYNC - Painel de Acoes' })
     .setTimestamp();
 
   if (possuiBannerLocal) {
@@ -249,19 +265,16 @@ function criarPainelAcoes(fs) {
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('acao_pequena')
-      .setLabel('Ações Pequenas')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🏳️'),
+      .setLabel('Acoes Pequenas')
+      .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('acao_media')
-      .setLabel('Ações Médias')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🏳️'),
+      .setLabel('Acoes Medias')
+      .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('acao_grande')
-      .setLabel('Ações Grandes')
+      .setLabel('Acoes Grandes')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🏳️')
   );
 
   return {
@@ -277,7 +290,7 @@ function criarSelectResultadoAcao(acaoId, desabilitado = false) {
       .setPlaceholder('Escolha o resultado final')
       .setDisabled(desabilitado)
       .addOptions(
-        { label: 'Vitória', value: 'Vitória' },
+        { label: 'Vitoria', value: 'Vitoria' },
         { label: 'Derrota', value: 'Derrota' },
         { label: 'Empate', value: 'Empate' }
       )
@@ -289,7 +302,7 @@ function criarBotoesAcao(acaoId, desabilitado = false) {
     new ButtonBuilder()
       .setCustomId(`${ACAO_ENTRAR_PREFIX}${acaoId}`)
       .setLabel('Entrar')
-      .setStyle(ButtonStyle.Success)
+      .setStyle(ButtonStyle.Secondary)
       .setDisabled(desabilitado),
     new ButtonBuilder()
       .setCustomId(`${ACAO_SAIR_PREFIX}${acaoId}`)
@@ -298,7 +311,7 @@ function criarBotoesAcao(acaoId, desabilitado = false) {
       .setDisabled(desabilitado),
     new ButtonBuilder()
       .setCustomId(`${ACAO_COMANDO_PREFIX}${acaoId}`)
-      .setLabel('Assumir Comando')
+      .setLabel('Assumir comando')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(desabilitado),
     new ButtonBuilder()
@@ -314,25 +327,36 @@ function criarEmbedAcao(acao, participantes, formatarMoeda) {
     ? participantes.map((participante) => `<@${participante.usuario_id}>`).join('\n')
     : 'Nenhum participante confirmado ainda.';
 
+  const totalAtual = participantes.length;
+  const totalEsperado = acao.quantidade_participantes || 0;
+  const etapaAtual = acao.resultado ? '3/3 - Finalizacao' : '2/3 - Participacao';
+
   return new EmbedBuilder()
     .setColor(0x2f3136)
-    .setTitle(acao.nome_acao || `${obterLabelTamanhoAcao(acao.tamanho)} em andamento`)
+    .setTitle('Painel interativo de acao')
     .setDescription(
       [
-        `**Comando da ação:** ${acao.comando_texto || 'Ninguém assumiu o comando ainda'}`,
-        `**Ação iniciada:** <t:${Math.floor(new Date(acao.iniciado_em).getTime() / 1000)}:f>`,
+        '**Resumo atual**',
+        `Modelo: ${obterLabelTamanhoAcao(acao.tamanho)}`,
+        `Tipo da acao: ${acao.nome_acao || 'Nao definido'}`,
+        `Estilo: ${acao.tipo_acao || 'Nao definido'}`,
+        `Participantes: ${totalAtual}/${totalEsperado}`,
+        `Dinheiro coletado: ${formatarMoeda(acao.dinheiro)}`,
         '',
-        `**Qtd. Participantes:** ${participantes.length}/${acao.quantidade_participantes}`,
-        `**Tipo da Ação:** ${acao.tipo_acao || 'Não definido'}`,
-        `**Resultado:** ${acao.resultado || 'Em andamento'}`,
+        PAINEL_DIVISOR,
         '',
-        `**Dinheiro:** ${formatarMoeda(acao.dinheiro)}`,
-        '',
-        '**Participantes**',
+        '**Participantes selecionados**',
         listaParticipantes,
+        '',
+        PAINEL_DIVISOR,
+        '',
+        `**Etapa atual: ${etapaAtual}**`,
+        `Comando atual: ${acao.comando_texto || 'Ninguem assumiu o comando ainda'}`,
+        `Resultado: ${acao.resultado || 'Em andamento'}`,
+        `Abertura: <t:${Math.floor(new Date(acao.iniciado_em).getTime() / 1000)}:f>`,
       ].join('\n')
     )
-    .setFooter({ text: `Ação #${acao.id}` })
+    .setFooter({ text: `Acao #${acao.id}` })
     .setTimestamp();
 }
 
@@ -348,23 +372,23 @@ function criarEmbedLogAcao(acao, participantes, formatarMoeda) {
     .setTitle(acao.nome_acao || obterLabelTamanhoAcao(acao.tamanho))
     .setDescription(
       [
-        `**Comando da ação:** ${acao.comando_texto || 'Não definido'}`,
-        `**Ação iniciada:** <t:${Math.floor(new Date(acao.iniciado_em).getTime() / 1000)}:f>`,
+        `Comando da acao: ${acao.comando_texto || 'Nao definido'}`,
+        `Acao iniciada: <t:${Math.floor(new Date(acao.iniciado_em).getTime() / 1000)}:f>`,
         '',
-        `**Qtd. Participantes:** ${participantes.length}`,
-        `**Tipo da Ação:** ${acao.tipo_acao || 'Não definido'}`,
-        `**Resultado:** ${acao.resultado || 'Não definido'}`,
+        `Qtd. participantes: ${participantes.length}`,
+        `Tipo da acao: ${acao.tipo_acao || 'Nao definido'}`,
+        `Resultado: ${acao.resultado || 'Nao definido'}`,
         '',
-        `**Dinheiro:** ${formatarMoeda(acao.dinheiro)}`,
+        `Dinheiro: ${formatarMoeda(acao.dinheiro)}`,
         '',
-        '**Participantes**',
+        'Participantes',
         listaParticipantes,
         '',
-        `**Valor por pessoa:** ${formatarMoeda(valorPorPessoa)}`,
-        `**Finalizada:** <t:${Math.floor(new Date(acao.finalizado_em || new Date()).getTime() / 1000)}:f>`,
+        `Valor por pessoa: ${formatarMoeda(valorPorPessoa)}`,
+        `Finalizada: <t:${Math.floor(new Date(acao.finalizado_em || new Date()).getTime() / 1000)}:f>`,
       ].join('\n')
     )
-    .setFooter({ text: `Ação #${acao.id}` })
+    .setFooter({ text: `Acao #${acao.id}` })
     .setTimestamp(new Date(acao.finalizado_em || new Date()));
 }
 
