@@ -456,6 +456,58 @@ function montarPayloadRascunhoConcluido(channelId) {
   };
 }
 
+function criarContainerLogAcao(acao, participantes, formatarMoeda) {
+  const totalParticipantes = participantes.length || 1;
+  const valorPorPessoa = Math.floor(Number(acao.dinheiro || 0) / totalParticipantes);
+  const listaParticipantes = participantes.length
+    ? participantes.map((participante) => `<@${participante.usuario_id}>`).join('\n')
+    : 'Nenhum participante confirmado.';
+
+  return criarContainerBase()
+    .addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents(
+          criarTexto(
+            [
+              '## Central de acoes',
+              `${acao.nome_acao || obterLabelTamanhoAcao(acao.tamanho)} finalizada e registrada com sucesso.`,
+            ].join('\n')
+          )
+        )
+        .setThumbnailAccessory(criarThumbnailPadrao())
+    )
+    .addSeparatorComponents(criarSeparador())
+    .addTextDisplayComponents(
+      criarTexto(
+        [
+          '**Resumo da central**',
+          `**Operacao:** ${acao.nome_acao || obterLabelTamanhoAcao(acao.tamanho)}`,
+          `**Lideranca:** ${acao.comando_texto || 'Nao definida'}`,
+          `**Estilo:** ${acao.tipo_acao || 'Nao definido'}`,
+          `**Resultado:** ${acao.resultado || 'Nao definido'}`,
+          `**Participantes:** ${participantes.length}`,
+          `**Valor total:** ${formatarMoeda(acao.dinheiro)}`,
+          `**Valor por pessoa:** ${formatarMoeda(valorPorPessoa)}`,
+          `**Iniciada em:** <t:${Math.floor(new Date(acao.iniciado_em).getTime() / 1000)}:f>`,
+          `**Finalizada em:** <t:${Math.floor(
+            new Date(acao.finalizado_em || new Date()).getTime() / 1000
+          )}:f>`,
+        ].join('\n')
+      )
+    )
+    .addSeparatorComponents(criarSeparador())
+    .addTextDisplayComponents(criarTexto(['**Equipe registrada**', listaParticipantes].join('\n')));
+}
+
+function montarPayloadLogAcao(acao, participantes, formatarMoeda) {
+  return {
+    content: null,
+    embeds: [],
+    flags: MessageFlags.IsComponentsV2,
+    components: [criarContainerLogAcao(acao, participantes, formatarMoeda)],
+  };
+}
+
 function criarEmbedLogAcao(acao, participantes, formatarMoeda) {
   const totalParticipantes = participantes.length || 1;
   const valorPorPessoa = Math.floor(Number(acao.dinheiro || 0) / totalParticipantes);
@@ -499,7 +551,9 @@ module.exports = {
   criarPainelAcoes,
   criarRascunhoAcao,
   criarSelectResultadoAcao,
+  criarContainerLogAcao,
   criarEmbedLogAcao,
+  montarPayloadLogAcao,
   montarPayloadMensagemAcao,
   montarPayloadRascunhoAcao,
   montarPayloadRascunhoConcluido,

@@ -28,7 +28,7 @@ const {
   criarModalDetalhesRascunhoAcao,
   criarPainelAcoes,
   criarRascunhoAcao,
-  criarEmbedLogAcao,
+  montarPayloadLogAcao,
   montarPayloadMensagemAcao,
   montarPayloadRascunhoAcao,
   montarPayloadRascunhoConcluido,
@@ -421,9 +421,9 @@ async function finalizarAcao(interaction, acaoId) {
   }
 
   await renderizarMensagemAcao(interaction, acaoId, true);
-  await canalLog.send({
-    embeds: [criarEmbedLogAcao(acaoAtualizada || acaoFinalizada, participantes, formatarMoeda)],
-  });
+  await canalLog.send(
+    montarPayloadLogAcao(acaoAtualizada || acaoFinalizada, participantes, formatarMoeda)
+  );
 
   if (acao.mensagem_id) {
     const canalOrigem = await client.channels.fetch(acao.canal_id).catch(() => null);
