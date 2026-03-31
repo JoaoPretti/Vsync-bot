@@ -3,10 +3,16 @@ const {
   ButtonBuilder,
   ButtonStyle,
   ChannelType,
+  ContainerBuilder,
   EmbedBuilder,
+  MessageFlags,
   ModalBuilder,
+  SectionBuilder,
+  SeparatorBuilder,
+  TextDisplayBuilder,
   TextInputBuilder,
   TextInputStyle,
+  ThumbnailBuilder,
 } = require('discord.js');
 
 const {
@@ -109,6 +115,61 @@ function criarBotoesAprovacaoLavagem(lavagemId, desabilitado = false) {
         .setDisabled(desabilitado)
     ),
   ];
+}
+
+function criarContainerAprovacaoLavagem(lavagem, desabilitado = false, descricao = null) {
+  const config = obterConfigLavagem(lavagem.tipo);
+  const statusTexto =
+    lavagem.status === 'pendente'
+      ? 'Pendente'
+      : lavagem.status === 'aprovada'
+        ? 'Aprovada'
+        : 'Recusada';
+
+  return new ContainerBuilder()
+    .setAccentColor(config.cor)
+    .addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(
+            [
+              `## Aprovacao Pendente - ${config.titulo}`,
+              descricao || 'Avalie a solicitacao abaixo.',
+            ].join('\n')
+          )
+        )
+        .setThumbnailAccessory(
+          new ThumbnailBuilder()
+            .setURL('https://cdn.discordapp.com/embed/avatars/0.png')
+            .setDescription('Lavagem')
+        )
+    )
+    .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        [
+          `**Grupo:** ${lavagem.grupo}`,
+          `**Valor Total:** ${formatarMoeda(lavagem.quantidade)}`,
+          `**Valor do Cliente:** ${formatarMoeda(lavagem.valor_cliente)}`,
+          `**Valor da Faccao:** ${formatarMoeda(lavagem.valor_faccao)}`,
+          `**Taxa:** ${lavagem.taxa_percentual}%`,
+          `**Usuario:** <@${lavagem.usuario_id}>`,
+          `**Passaporte:** ${lavagem.personagem_id}`,
+          `**Status:** ${statusTexto}`,
+        ].join('\n')
+      )
+    )
+    .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
+    .addActionRowComponents(...criarBotoesAprovacaoLavagem(lavagem.id, desabilitado));
+}
+
+function montarPayloadAprovacaoLavagem(lavagem, desabilitado = false, descricao = null) {
+  return {
+    content: null,
+    embeds: [],
+    flags: MessageFlags.IsComponentsV2,
+    components: [criarContainerAprovacaoLavagem(lavagem, desabilitado, descricao)],
+  };
 }
 
 function criarEmbedAprovacaoLavagem(lavagem) {
@@ -217,10 +278,7 @@ async function processarModalLavagem(interaction, tipo, client) {
     throw new Error('Canal de aprovação de lavagem não encontrado ou inválido.');
   }
 
-  const mensagemAprovacao = await canalAprovacao.send({
-    embeds: [criarEmbedAprovacaoLavagem(lavagem)],
-    components: criarBotoesAprovacaoLavagem(lavagem.id),
-  });
+  const mensagemAprovacao = await canalAprovacao.send(montarPayloadAprovacaoLavagem(lavagem));
 
   await atualizarMensagemAprovacaoLavagem(lavagem.id, mensagemAprovacao.id, canalAprovacao.id);
 
@@ -234,14 +292,14 @@ async function finalizarLavagem(interaction, lavagemId, acao, client) {
 
   if (!lavagem) {
     return interaction.reply({
-      content: 'Não encontrei essa solicitação de lavagem.',
+      content: 'Nao encontrei essa solicitacao de lavagem.',
       ephemeral: true,
     });
   }
 
   if (lavagem.status !== 'pendente') {
     return interaction.reply({
-      content: `Essa lavagem já foi ${lavagem.status}.`,
+      content: `Essa lavagem ja foi ${lavagem.status}.`,
       ephemeral: true,
     });
   }
@@ -255,32 +313,25 @@ async function finalizarLavagem(interaction, lavagemId, acao, client) {
 
   if (!lavagemAtualizada) {
     return interaction.editReply({
-      content: 'Essa lavagem já foi processada por outra pessoa.',
+      content: 'Essa lavagem ja foi processada por outra pessoa.',
     });
   }
 
-  const embedAtualizado = criarEmbedAprovacaoLavagem(lavagemAtualizada)
-    .setDescription(
+  await interaction.message.edit(
+    montarPayloadAprovacaoLavagem(
+      lavagemAtualizada,
+      true,
       acao === 'aprovar'
-        ? `Solicitação aprovada por <@${interaction.user.id}>.`
-        : `Solicitação recusada por <@${interaction.user.id}>.`
+        ? `Solicitacao aprovada por <@${interaction.user.id}>.`
+        : `Solicitacao recusada por <@${interaction.user.id}>.`
     )
-    .spliceFields(7, 1, {
-      name: 'Status',
-      value: acao === 'aprovar' ? 'Aprovada' : 'Recusada',
-      inline: true,
-    });
-
-  await interaction.message.edit({
-    embeds: [embedAtualizado],
-    components: criarBotoesAprovacaoLavagem(lavagemId, true),
-  });
+  );
 
   if (acao === 'aprovar') {
     const canalRegistro = await client.channels.fetch(CANAL_REGISTRO_LAVAGEM_ID).catch(() => null);
 
     if (!canalRegistro || canalRegistro.type !== ChannelType.GuildText) {
-      throw new Error('Canal de registro de lavagem não encontrado ou inválido.');
+      throw new Error('Canal de registro de lavagem nao encontrado ou invalido.');
     }
 
     await canalRegistro.send({
