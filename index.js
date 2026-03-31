@@ -11,7 +11,6 @@ const {
   GatewayIntentBits,
   Partials,
 } = require('discord.js');
-const fs = require('fs');
 
 const db = require('./database/db');
 const initDatabase = require('./database/init');
@@ -21,17 +20,12 @@ const {
   ACAO_RASCUNHO_MODAL_PREFIX,
   ACAO_RASCUNHO_NOME_PREFIX,
   ACAO_RASCUNHO_TIPO_PREFIX,
-  criarAbasPainelAcao,
-  criarBotoesAcao,
-  criarControlesAcaoSecundarios,
   criarModalDetalhesRascunhoAcao,
   criarPainelAcoes,
   criarRascunhoAcao,
-  criarSelectResultadoAcao,
-  criarEmbedAcao,
   criarEmbedLogAcao,
+  montarPayloadMensagemAcao,
   montarPayloadRascunhoAcao,
-  obterArquivosPainelAcoes,
   obterRascunhoAcao,
   rascunhoAcaoEstaPronto,
   removerRascunhoAcao,
@@ -64,6 +58,35 @@ const client = new Client({
 
 function formatarMoeda(valor) {
   return utils.formatarMoeda(valor);
+}
+
+function coletarCustomIdsComponentes(componentes = []) {
+  const ids = [];
+
+  for (const componente of componentes) {
+    if (!componente) {
+      continue;
+    }
+
+    if (componente.customId) {
+      ids.push(componente.customId);
+    }
+
+    if (componente.accessory?.customId) {
+      ids.push(componente.accessory.customId);
+    }
+
+    if (Array.isArray(componente.components) && componente.components.length) {
+      ids.push(...coletarCustomIdsComponentes(componente.components));
+    }
+  }
+
+  return ids;
+}
+
+function mensagemPossuiAlgumCustomId(message, customIds) {
+  const idsNaMensagem = new Set(coletarCustomIdsComponentes(message.components));
+  return customIds.some((customId) => idsNaMensagem.has(customId));
 }
 
 async function resolverUrlImagem(urlInformada) {
@@ -237,8 +260,7 @@ async function publicarOuAtualizarPainelAcoes() {
     return;
   }
 
-  const painel = criarPainelAcoes(fs);
-  const arquivos = obterArquivosPainelAcoes(fs);
+  const painel = criarPainelAcoes();
   const canal = await client.channels.fetch(PAINEL_ACOES_CANAL_ID).catch(() => null);
 
   if (!canal || canal.type !== ChannelType.GuildText) {
@@ -250,20 +272,17 @@ async function publicarOuAtualizarPainelAcoes() {
   const mensagemExistente = mensagens.find(
     (message) =>
       message.author.id === client.user.id &&
-      message.embeds.some((embed) => embed.title === painel.embed.data.title)
+      (message.embeds.some((embed) => embed.title === 'Criar relatorio de acao') ||
+        mensagemPossuiAlgumCustomId(message, ['acao_pequena', 'acao_media', 'acao_grande']))
   );
 
   const payload = {
-    embeds: [painel.embed],
+    flags: painel.flags,
     components: painel.components,
-    files: arquivos,
   };
 
   if (mensagemExistente) {
-    await mensagemExistente.edit({
-      embeds: [painel.embed],
-      components: painel.components,
-    });
+    await mensagemExistente.edit(payload);
     return;
   }
 
@@ -316,15 +335,7 @@ async function renderizarMensagemAcao(interactionOrChannel, acaoId, desabilitado
   }
 
   const participantes = await buscarParticipantesAcao(acaoId);
-  const payload = {
-    embeds: [criarEmbedAcao(acao, participantes, formatarMoeda)],
-    components: [
-      criarAbasPainelAcao(Boolean(acao.resultado)),
-      criarSelectResultadoAcao(acaoId, desabilitado),
-      criarBotoesAcao(acaoId, desabilitado),
-      criarControlesAcaoSecundarios(acaoId, desabilitado),
-    ],
-  };
+  const payload = montarPayloadMensagemAcao(acao, participantes, formatarMoeda, desabilitado);
 
   if (acao.mensagem_id) {
     const canal = interactionOrChannel.channel || interactionOrChannel;

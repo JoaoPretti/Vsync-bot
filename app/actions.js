@@ -1,13 +1,18 @@
 const {
   ActionRowBuilder,
-  AttachmentBuilder,
   ButtonBuilder,
   ButtonStyle,
+  ContainerBuilder,
   EmbedBuilder,
+  MessageFlags,
   ModalBuilder,
+  SectionBuilder,
+  SeparatorBuilder,
   StringSelectMenuBuilder,
+  TextDisplayBuilder,
   TextInputBuilder,
   TextInputStyle,
+  ThumbnailBuilder,
 } = require('discord.js');
 
 const {
@@ -17,8 +22,6 @@ const {
   ACAO_SAIR_PREFIX,
   ACAO_SELECT_RESULTADO_PREFIX,
   ACOES_DISPONIVEIS,
-  ACOES_PAINEL_BANNER_URL,
-  ACOES_PAINEL_IMAGE_PATH,
   CADASTRO_THUMBNAIL_URL,
 } = require('../config/constants');
 
@@ -29,7 +32,6 @@ const ACAO_RASCUNHO_CONFIRMAR_PREFIX = 'acao_rascunho_confirmar_';
 const ACAO_RASCUNHO_MODAL_PREFIX = 'modal_rascunho_acao_';
 const ACAO_RASCUNHO_TTL_MS = 30 * 60 * 1000;
 const TIPOS_ACAO = ['Tiro', 'Fuga', 'Arma Branca'];
-const PAINEL_DIVISOR = '------------------------------';
 
 const rascunhosAcao = new Map();
 
@@ -101,14 +103,20 @@ function rascunhoAcaoEstaPronto(rascunho) {
   );
 }
 
-function obterResumoRascunhoAcao(rascunho, formatarMoeda) {
-  return [
-    `Modelo: ${obterLabelTamanhoAcao(rascunho.tamanho)}`,
-    `Tipo da acao: ${rascunho.nomeAcao || 'Nao selecionada'}`,
-    `Estilo: ${rascunho.tipoAcao || 'Nao selecionado'}`,
-    `Participantes: ${rascunho.quantidadeParticipantes ?? 'Nao informado'}`,
-    `Dinheiro coletado: ${rascunho.dinheiro ? formatarMoeda(rascunho.dinheiro) : 'Nao informado'}`,
-  ];
+function criarTexto(content) {
+  return new TextDisplayBuilder().setContent(content);
+}
+
+function criarSeparador() {
+  return new SeparatorBuilder().setDivider(true);
+}
+
+function criarThumbnailPadrao() {
+  return new ThumbnailBuilder().setURL(CADASTRO_THUMBNAIL_URL).setDescription('VSYNC');
+}
+
+function criarContainerBase() {
+  return new ContainerBuilder().setAccentColor(0x2f3136);
 }
 
 function criarBotaoAba(label, style) {
@@ -137,34 +145,6 @@ function criarAbasPainelAcao(resultadoDefinido = false) {
     criarBotaoAba('Dinheiro', ButtonStyle.Secondary),
     criarBotaoAba('Finalizar', resultadoDefinido ? ButtonStyle.Primary : ButtonStyle.Secondary)
   );
-}
-
-function criarEmbedRascunhoAcao(rascunho, formatarMoeda) {
-  const pronto = rascunhoAcaoEstaPronto(rascunho);
-
-  return new EmbedBuilder()
-    .setColor(0x2f3136)
-    .setTitle('Painel interativo de acao')
-    .setDescription(
-      [
-        '**Resumo atual**',
-        ...obterResumoRascunhoAcao(rascunho, formatarMoeda),
-        '',
-        PAINEL_DIVISOR,
-        '',
-        `**Etapa atual: ${pronto ? '3/3 - Confirmacao' : '2/3 - Configuracao'}**`,
-        pronto
-          ? 'Tudo pronto para publicar. Revise as informacoes e clique em "Criar acao".'
-          : 'Use os menus abaixo e preencha os detalhes para concluir a configuracao.',
-        '',
-        PAINEL_DIVISOR,
-        '',
-        `Criado por: <@${rascunho.userId}>`,
-        `Status: ${pronto ? 'Pronto para publicar' : 'Em configuracao'}`,
-      ].join('\n')
-    )
-    .setFooter({ text: `Rascunho ${obterLabelTamanhoAcao(rascunho.tamanho)}` })
-    .setTimestamp();
 }
 
 function criarSelectRascunhoAcoes(token, tamanho, valorAtual = null) {
@@ -216,102 +196,6 @@ function criarBotoesRascunhoAcao(token, pronto = false) {
   );
 }
 
-function montarPayloadRascunhoAcao(rascunho, formatarMoeda) {
-  return {
-    embeds: [criarEmbedRascunhoAcao(rascunho, formatarMoeda)],
-    components: [
-      criarAbasPainelRascunho(rascunhoAcaoEstaPronto(rascunho)),
-      criarSelectRascunhoAcoes(rascunho.token, rascunho.tamanho, rascunho.nomeAcao),
-      criarSelectRascunhoTipo(rascunho.token, rascunho.tipoAcao),
-      criarBotoesRascunhoAcao(rascunho.token, rascunhoAcaoEstaPronto(rascunho)),
-    ],
-  };
-}
-
-function criarModalDetalhesRascunhoAcao(token, rascunho) {
-  const modal = new ModalBuilder()
-    .setCustomId(`${ACAO_RASCUNHO_MODAL_PREFIX}${token}`)
-    .setTitle(`Detalhes - ${obterLabelTamanhoAcao(rascunho.tamanho)}`);
-
-  const quantidadeInput = new TextInputBuilder()
-    .setCustomId('quantidade_participantes')
-    .setLabel('Quantidade de participantes')
-    .setStyle(TextInputStyle.Short)
-    .setRequired(true)
-    .setValue(rascunho.quantidadeParticipantes ? String(rascunho.quantidadeParticipantes) : '')
-    .setMaxLength(3)
-    .setPlaceholder('Ex.: 8');
-
-  const dinheiroInput = new TextInputBuilder()
-    .setCustomId('dinheiro')
-    .setLabel('Dinheiro')
-    .setStyle(TextInputStyle.Short)
-    .setRequired(true)
-    .setValue(rascunho.dinheiro ? String(rascunho.dinheiro) : '')
-    .setMaxLength(12)
-    .setPlaceholder('Ex.: 1125000');
-
-  modal.addComponents(
-    new ActionRowBuilder().addComponents(quantidadeInput),
-    new ActionRowBuilder().addComponents(dinheiroInput)
-  );
-
-  return modal;
-}
-
-function obterArquivosPainelAcoes(fs) {
-  if (!fs.existsSync(ACOES_PAINEL_IMAGE_PATH)) {
-    return [];
-  }
-
-  return [new AttachmentBuilder(ACOES_PAINEL_IMAGE_PATH, { name: 'painel_acoes.png' })];
-}
-
-function criarPainelAcoes(fs) {
-  const possuiBannerLocal = fs.existsSync(ACOES_PAINEL_IMAGE_PATH);
-  const embed = new EmbedBuilder()
-    .setColor(0x2f3136)
-    .setTitle('Criar relatorio de acao')
-    .setDescription(
-      [
-        'Este canal e destinado ao registro de acoes blipadas.',
-        '',
-        PAINEL_DIVISOR,
-        '',
-        'Selecione abaixo o porte da acao.',
-        'Depois, complete o painel interativo que sera aberto em seguida.',
-        'Os dados ficam organizados para controle, estatistica e historico.',
-      ].join('\n')
-    )
-    .setThumbnail(CADASTRO_THUMBNAIL_URL)
-    .setFooter({ text: 'VSYNC - Painel de Acoes' })
-    .setTimestamp();
-
-  if (possuiBannerLocal) {
-    embed.setImage(ACOES_PAINEL_BANNER_URL);
-  }
-
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId('acao_pequena')
-      .setLabel('Acoes Pequenas')
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId('acao_media')
-      .setLabel('Acoes Medias')
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId('acao_grande')
-      .setLabel('Acoes Grandes')
-      .setStyle(ButtonStyle.Secondary)
-  );
-
-  return {
-    embed,
-    components: [row],
-  };
-}
-
 function criarSelectResultadoAcao(acaoId, desabilitado = false) {
   return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
@@ -356,14 +240,59 @@ function criarControlesAcaoSecundarios(acaoId, desabilitado = false) {
   );
 }
 
-function criarEmbedAcao(acao, participantes, formatarMoeda) {
-  const listaParticipantes = participantes.length
-    ? participantes.map((participante) => `<@${participante.usuario_id}>`).join('\n')
-    : 'Nenhum participante confirmado ainda.';
+function criarBotoesPainelAcoes() {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('acao_pequena')
+      .setLabel('Acoes Pequenas')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('acao_media')
+      .setLabel('Acoes Medias')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('acao_grande')
+      .setLabel('Acoes Grandes')
+      .setStyle(ButtonStyle.Secondary)
+  );
+}
 
-  const totalAtual = participantes.length;
-  const totalEsperado = acao.quantidade_participantes || 0;
-  const etapaAtual = acao.resultado ? '3/3 - Finalizacao' : '2/3 - Participacao';
+function criarPainelAcoes() {
+  const container = criarContainerBase()
+    .addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents(
+          criarTexto(
+            [
+              '## Painel de acoes',
+              'Crie e acompanhe registros de acoes em um painel interativo.',
+            ].join('\n')
+          )
+        )
+        .setThumbnailAccessory(criarThumbnailPadrao())
+    )
+    .addSeparatorComponents(criarSeparador())
+    .addTextDisplayComponents(
+      criarTexto(
+        [
+          '**Como funciona**',
+          '- Escolha o porte da acao.',
+          '- Preencha o rascunho com tipo, estilo, equipe e dinheiro.',
+          '- Publique a acao e acompanhe tudo no mesmo card.',
+        ].join('\n')
+      )
+    )
+    .addActionRowComponents(criarBotoesPainelAcoes());
+
+  return {
+    identificador: 'painel_acoes_v2',
+    flags: MessageFlags.IsComponentsV2,
+    components: [container],
+  };
+}
+
+function criarEmbedRascunhoAcao(rascunho, formatarMoeda) {
+  const pronto = rascunhoAcaoEstaPronto(rascunho);
 
   return new EmbedBuilder()
     .setColor(0x2f3136)
@@ -371,27 +300,151 @@ function criarEmbedAcao(acao, participantes, formatarMoeda) {
     .setDescription(
       [
         '**Resumo atual**',
-        `Modelo: ${obterLabelTamanhoAcao(acao.tamanho)}`,
-        `Tipo da acao: ${acao.nome_acao || 'Nao definido'}`,
-        `Estilo: ${acao.tipo_acao || 'Nao definido'}`,
-        `Participantes: ${totalAtual}/${totalEsperado}`,
-        `Dinheiro coletado: ${formatarMoeda(acao.dinheiro)}`,
+        `Modelo: ${obterLabelTamanhoAcao(rascunho.tamanho)}`,
+        `Tipo da acao: ${rascunho.nomeAcao || 'Nao selecionada'}`,
+        `Estilo: ${rascunho.tipoAcao || 'Nao selecionado'}`,
+        `Participantes: ${rascunho.quantidadeParticipantes ?? 'Nao informado'}`,
+        `Dinheiro coletado: ${
+          rascunho.dinheiro ? formatarMoeda(rascunho.dinheiro) : 'Nao informado'
+        }`,
         '',
-        PAINEL_DIVISOR,
+        `**Etapa atual: ${pronto ? '3/3 - Confirmacao' : '2/3 - Configuracao'}**`,
+        pronto
+          ? 'Tudo pronto para publicar. Revise as informacoes e clique em "Criar acao".'
+          : 'Use os menus abaixo e preencha os detalhes para concluir a configuracao.',
         '',
-        '**Participantes selecionados**',
-        listaParticipantes,
-        '',
-        PAINEL_DIVISOR,
-        '',
-        `**Etapa atual: ${etapaAtual}**`,
-        `Comando atual: ${acao.comando_texto || 'Ninguem assumiu o comando ainda'}`,
-        `Resultado: ${acao.resultado || 'Em andamento'}`,
-        `Abertura: <t:${Math.floor(new Date(acao.iniciado_em).getTime() / 1000)}:f>`,
+        `Criado por: <@${rascunho.userId}>`,
+        `Status: ${pronto ? 'Pronto para publicar' : 'Em configuracao'}`,
       ].join('\n')
     )
-    .setFooter({ text: `Acao #${acao.id}` })
+    .setFooter({ text: `Rascunho ${obterLabelTamanhoAcao(rascunho.tamanho)}` })
     .setTimestamp();
+}
+
+function montarPayloadRascunhoAcao(rascunho, formatarMoeda) {
+  return {
+    embeds: [criarEmbedRascunhoAcao(rascunho, formatarMoeda)],
+    components: [
+      criarAbasPainelRascunho(rascunhoAcaoEstaPronto(rascunho)),
+      criarSelectRascunhoAcoes(rascunho.token, rascunho.tamanho, rascunho.nomeAcao),
+      criarSelectRascunhoTipo(rascunho.token, rascunho.tipoAcao),
+      criarBotoesRascunhoAcao(rascunho.token, rascunhoAcaoEstaPronto(rascunho)),
+    ],
+  };
+}
+
+function criarModalDetalhesRascunhoAcao(token, rascunho) {
+  const modal = new ModalBuilder()
+    .setCustomId(`${ACAO_RASCUNHO_MODAL_PREFIX}${token}`)
+    .setTitle(`Detalhes - ${obterLabelTamanhoAcao(rascunho.tamanho)}`);
+
+  const quantidadeInput = new TextInputBuilder()
+    .setCustomId('quantidade_participantes')
+    .setLabel('Quantidade de participantes')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setValue(rascunho.quantidadeParticipantes ? String(rascunho.quantidadeParticipantes) : '')
+    .setMaxLength(3)
+    .setPlaceholder('Ex.: 8');
+
+  const dinheiroInput = new TextInputBuilder()
+    .setCustomId('dinheiro')
+    .setLabel('Dinheiro')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setValue(rascunho.dinheiro ? String(rascunho.dinheiro) : '')
+    .setMaxLength(12)
+    .setPlaceholder('Ex.: 1125000');
+
+  modal.addComponents(
+    new ActionRowBuilder().addComponents(quantidadeInput),
+    new ActionRowBuilder().addComponents(dinheiroInput)
+  );
+
+  return modal;
+}
+
+function criarContainerMensagemAcao(acao, participantes, formatarMoeda, desabilitado = false) {
+  const listaParticipantes = participantes.length
+    ? participantes
+        .map((participante, index) => `${index + 1}. <@${participante.usuario_id}>`)
+        .join('\n')
+    : 'Nenhum participante confirmado ainda.';
+
+  const totalAtual = participantes.length;
+  const totalEsperado = acao.quantidade_participantes || 0;
+  const etapaAtual = acao.resultado ? '3/3 - Finalizacao' : '2/3 - Participacao';
+
+  return criarContainerBase()
+    .addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents(
+          criarTexto(
+            [
+              '## Painel interativo de acao',
+              `Acompanhe a configuracao e o andamento de ${acao.nome_acao || obterLabelTamanhoAcao(acao.tamanho)}.`,
+            ].join('\n')
+          )
+        )
+        .setThumbnailAccessory(criarThumbnailPadrao())
+    )
+    .addSeparatorComponents(criarSeparador())
+    .addTextDisplayComponents(
+      criarTexto(
+        [
+          '**Resumo atual**',
+          `Modelo: ${obterLabelTamanhoAcao(acao.tamanho)}`,
+          `Tipo da acao: ${acao.nome_acao || 'Nao definido'}`,
+          `Estilo: ${acao.tipo_acao || 'Nao definido'}`,
+          `Participantes: ${totalAtual}/${totalEsperado}`,
+          `Dinheiro coletado: ${formatarMoeda(acao.dinheiro)}`,
+        ].join('\n')
+      )
+    )
+    .addSeparatorComponents(criarSeparador())
+    .addTextDisplayComponents(
+      criarTexto(['**Participantes selecionados**', listaParticipantes].join('\n'))
+    )
+    .addSeparatorComponents(criarSeparador())
+    .addTextDisplayComponents(
+      criarTexto(
+        [
+          `**Etapa atual: ${etapaAtual}**`,
+          `Comando atual: ${acao.comando_texto || 'Ninguem assumiu o comando ainda'}`,
+          `Resultado: ${acao.resultado || 'Em andamento'}`,
+          `Abertura: <t:${Math.floor(new Date(acao.iniciado_em).getTime() / 1000)}:f>`,
+        ].join('\n')
+      )
+    )
+    .addSeparatorComponents(criarSeparador())
+    .addActionRowComponents(criarAbasPainelAcao(Boolean(acao.resultado)))
+    .addActionRowComponents(criarSelectResultadoAcao(acao.id, desabilitado))
+    .addActionRowComponents(criarBotoesAcao(acao.id, desabilitado))
+    .addActionRowComponents(criarControlesAcaoSecundarios(acao.id, desabilitado));
+}
+
+function montarPayloadMensagemAcao(acao, participantes, formatarMoeda, desabilitado = false) {
+  return {
+    flags: MessageFlags.IsComponentsV2,
+    components: [criarContainerMensagemAcao(acao, participantes, formatarMoeda, desabilitado)],
+  };
+}
+
+function montarPayloadRascunhoConcluido(channelId) {
+  return {
+    flags: MessageFlags.IsComponentsV2,
+    components: [
+      criarContainerBase().addTextDisplayComponents(
+        criarTexto(
+          [
+            '## Acao criada com sucesso',
+            `A nova acao foi publicada em ${channelId ? `<#${channelId}>` : 'este canal'}.`,
+            'Voce pode fechar esta mensagem.',
+          ].join('\n')
+        )
+      ),
+    ],
+  };
 }
 
 function criarEmbedLogAcao(acao, participantes, formatarMoeda) {
@@ -401,29 +454,28 @@ function criarEmbedLogAcao(acao, participantes, formatarMoeda) {
     ? participantes.map((participante) => `<@${participante.usuario_id}>`).join('\n')
     : 'Nenhum participante confirmado.';
 
-  return new EmbedBuilder()
-    .setColor(0x2f3136)
-    .setTitle(acao.nome_acao || obterLabelTamanhoAcao(acao.tamanho))
-    .setDescription(
-      [
-        `Comando da acao: ${acao.comando_texto || 'Nao definido'}`,
-        `Acao iniciada: <t:${Math.floor(new Date(acao.iniciado_em).getTime() / 1000)}:f>`,
-        '',
-        `Qtd. participantes: ${participantes.length}`,
-        `Tipo da acao: ${acao.tipo_acao || 'Nao definido'}`,
-        `Resultado: ${acao.resultado || 'Nao definido'}`,
-        '',
-        `Dinheiro: ${formatarMoeda(acao.dinheiro)}`,
-        '',
-        'Participantes',
-        listaParticipantes,
-        '',
-        `Valor por pessoa: ${formatarMoeda(valorPorPessoa)}`,
-        `Finalizada: <t:${Math.floor(new Date(acao.finalizado_em || new Date()).getTime() / 1000)}:f>`,
-      ].join('\n')
-    )
-    .setFooter({ text: `Acao #${acao.id}` })
-    .setTimestamp(new Date(acao.finalizado_em || new Date()));
+  return {
+    color: 0x2f3136,
+    title: acao.nome_acao || obterLabelTamanhoAcao(acao.tamanho),
+    description: [
+      `Comando da acao: ${acao.comando_texto || 'Nao definido'}`,
+      `Acao iniciada: <t:${Math.floor(new Date(acao.iniciado_em).getTime() / 1000)}:f>`,
+      '',
+      `Qtd. participantes: ${participantes.length}`,
+      `Tipo da acao: ${acao.tipo_acao || 'Nao definido'}`,
+      `Resultado: ${acao.resultado || 'Nao definido'}`,
+      '',
+      `Dinheiro: ${formatarMoeda(acao.dinheiro)}`,
+      '',
+      'Participantes',
+      listaParticipantes,
+      '',
+      `Valor por pessoa: ${formatarMoeda(valorPorPessoa)}`,
+      `Finalizada: <t:${Math.floor(new Date(acao.finalizado_em || new Date()).getTime() / 1000)}:f>`,
+    ].join('\n'),
+    footer: { text: `Acao #${acao.id}` },
+    timestamp: new Date(acao.finalizado_em || new Date()).toISOString(),
+  };
 }
 
 module.exports = {
@@ -439,10 +491,10 @@ module.exports = {
   criarPainelAcoes,
   criarRascunhoAcao,
   criarSelectResultadoAcao,
-  criarEmbedAcao,
   criarEmbedLogAcao,
+  montarPayloadMensagemAcao,
   montarPayloadRascunhoAcao,
-  obterArquivosPainelAcoes,
+  montarPayloadRascunhoConcluido,
   obterLabelTamanhoAcao,
   obterRascunhoAcao,
   rascunhoAcaoEstaPronto,
