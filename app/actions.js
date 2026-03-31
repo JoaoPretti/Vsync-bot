@@ -508,56 +508,19 @@ function montarPayloadLogAcao(acao, participantes, formatarMoeda) {
   };
 }
 
-function criarEmbedLogAcao(acao, participantes, formatarMoeda) {
-  const totalParticipantes = participantes.length || 1;
-  const valorPorPessoa = Math.floor(Number(acao.dinheiro || 0) / totalParticipantes);
-  const listaParticipantes = participantes.length
-    ? participantes.map((participante) => `<@${participante.usuario_id}>`).join('\n')
-    : 'Nenhum participante confirmado.';
-
-  return {
-    color: 0x2f3136,
-    title: acao.nome_acao || obterLabelTamanhoAcao(acao.tamanho),
-    description: [
-      `Comando da acao: ${acao.comando_texto || 'Nao definido'}`,
-      `Acao iniciada: <t:${Math.floor(new Date(acao.iniciado_em).getTime() / 1000)}:f>`,
-      '',
-      `Qtd. participantes: ${participantes.length}`,
-      `Tipo da acao: ${acao.tipo_acao || 'Nao definido'}`,
-      `Resultado: ${acao.resultado || 'Nao definido'}`,
-      '',
-      `Dinheiro: ${formatarMoeda(acao.dinheiro)}`,
-      '',
-      'Participantes',
-      listaParticipantes,
-      '',
-      `Valor por pessoa: ${formatarMoeda(valorPorPessoa)}`,
-      `Finalizada: <t:${Math.floor(new Date(acao.finalizado_em || new Date()).getTime() / 1000)}:f>`,
-    ].join('\n'),
-    footer: { text: `Acao #${acao.id}` },
-    timestamp: new Date(acao.finalizado_em || new Date()).toISOString(),
-  };
-}
-
 module.exports = {
   ACAO_RASCUNHO_CONFIRMAR_PREFIX,
   ACAO_RASCUNHO_DETALHES_PREFIX,
   ACAO_RASCUNHO_MODAL_PREFIX,
   ACAO_RASCUNHO_NOME_PREFIX,
   ACAO_RASCUNHO_TIPO_PREFIX,
-  criarBotoesAcao,
-  criarControlesAcaoSecundarios,
   criarModalDetalhesRascunhoAcao,
   criarPainelAcoes,
   criarRascunhoAcao,
-  criarSelectResultadoAcao,
-  criarContainerLogAcao,
-  criarEmbedLogAcao,
   montarPayloadLogAcao,
   montarPayloadMensagemAcao,
   montarPayloadRascunhoAcao,
   montarPayloadRascunhoConcluido,
-  obterLabelTamanhoAcao,
   obterRascunhoAcao,
   rascunhoAcaoEstaPronto,
   removerRascunhoAcao,

@@ -4,7 +4,6 @@ const {
   ButtonStyle,
   ChannelType,
   ContainerBuilder,
-  EmbedBuilder,
   MessageFlags,
   ModalBuilder,
   SectionBuilder,
@@ -223,52 +222,6 @@ function montarPayloadRegistroLavagem(lavagem) {
   };
 }
 
-function criarEmbedAprovacaoLavagem(lavagem) {
-  const config = obterConfigLavagem(lavagem.tipo);
-
-  return new EmbedBuilder()
-    .setColor(config.cor)
-    .setTitle(`Aprovação Pendente • ${config.titulo}`)
-    .setDescription('Avalie a solicitação abaixo.')
-    .setFields(
-      { name: 'Grupo', value: lavagem.grupo, inline: true },
-      { name: 'Valor Total', value: formatarMoeda(lavagem.quantidade), inline: true },
-      { name: 'Valor do Cliente', value: formatarMoeda(lavagem.valor_cliente), inline: true },
-      { name: 'Valor da Facção', value: formatarMoeda(lavagem.valor_faccao), inline: true },
-      { name: 'Taxa', value: `${lavagem.taxa_percentual}%`, inline: true },
-      { name: 'Usuário', value: `<@${lavagem.usuario_id}>`, inline: true },
-      { name: 'Passaporte', value: lavagem.personagem_id, inline: true },
-      { name: 'Status', value: 'Pendente', inline: true }
-    )
-    .setFooter({ text: `Lavagem #${lavagem.id}` })
-    .setTimestamp(new Date(lavagem.criado_em));
-}
-
-function criarEmbedRegistroLavagem(lavagem) {
-  const config = obterConfigLavagem(lavagem.tipo);
-
-  return new EmbedBuilder()
-    .setColor(config.cor)
-    .setTitle(config.titulo)
-    .setDescription('Lavagem aprovada e contabilizada com sucesso.')
-    .setFields(
-      { name: 'Grupo', value: lavagem.grupo, inline: true },
-      { name: 'Valor Total', value: formatarMoeda(lavagem.quantidade), inline: true },
-      { name: 'Valor do Cliente', value: formatarMoeda(lavagem.valor_cliente), inline: true },
-      { name: 'Valor da Facção', value: formatarMoeda(lavagem.valor_faccao), inline: true },
-      { name: 'Taxa', value: `${lavagem.taxa_percentual}%`, inline: true },
-      { name: 'Usuário', value: `<@${lavagem.usuario_id}>`, inline: true },
-      { name: 'Passaporte', value: lavagem.personagem_id, inline: true },
-      {
-        name: 'Aprovado por',
-        value: lavagem.aprovado_por_id ? `<@${lavagem.aprovado_por_id}>` : 'Não informado',
-        inline: true,
-      }
-    )
-    .setFooter({ text: `Lavagem #${lavagem.id}` })
-    .setTimestamp(new Date(lavagem.atualizado_em || lavagem.criado_em));
-}
-
 async function processarModalLavagem(interaction, tipo, client) {
   const config = obterConfigLavagem(tipo);
   const quantidadeTexto = interaction.fields.getTextInputValue('quantidade').trim();
@@ -397,15 +350,8 @@ async function finalizarLavagem(interaction, lavagemId, acao, client) {
 }
 
 module.exports = {
-  calcularValoresLavagem,
-  criarBotoesAprovacaoLavagem,
-  criarEmbedAprovacaoLavagem,
-  criarEmbedRegistroLavagem,
-  criarContainerRegistroLavagem,
   criarModalLavagem,
   finalizarLavagem,
   montarPayloadAprovacaoLavagem,
-  montarPayloadRegistroLavagem,
-  obterConfigLavagem,
   processarModalLavagem,
 };

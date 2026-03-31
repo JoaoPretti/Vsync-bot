@@ -453,49 +453,6 @@ async function aprovarLavagem(lavagemId, aprovador) {
   return result.rows[0] || null;
 }
 
-async function removerDadosUsuarioDoBanco(usuarioId) {
-  await db.query('BEGIN');
-
-  try {
-    await db.query(
-      `
-        DELETE FROM lavagens
-        WHERE usuario_id = $1
-      `,
-      [usuarioId]
-    );
-
-    await db.query(
-      `
-        DELETE FROM relatorios_semanais
-        WHERE usuario_id = $1
-      `,
-      [usuarioId]
-    );
-
-    await db.query(
-      `
-        DELETE FROM registros
-        WHERE usuario_id = $1
-      `,
-      [usuarioId]
-    );
-
-    await db.query(
-      `
-        DELETE FROM cadastros
-        WHERE discord_user_id = $1
-      `,
-      [usuarioId]
-    );
-
-    await db.query('COMMIT');
-  } catch (error) {
-    await db.query('ROLLBACK');
-    throw error;
-  }
-}
-
 async function recusarLavagem(lavagemId, recusador) {
   const result = await db.query(
     `
@@ -539,7 +496,6 @@ module.exports = {
   buscarUsuariosComFarm,
   manterUltimos52RelatoriosPorUsuario,
   recusarLavagem,
-  removerDadosUsuarioDoBanco,
   removerParticipanteAcao,
   resetarFarmUsuario,
   salvarAcao,
