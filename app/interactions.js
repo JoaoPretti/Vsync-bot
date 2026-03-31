@@ -1,7 +1,6 @@
 const {
   ChannelType,
   ContainerBuilder,
-  EmbedBuilder,
   MessageFlags,
   PermissionFlagsBits,
   SectionBuilder,
@@ -58,6 +57,118 @@ function criarPayloadRegistroFarm({ item, quantidade, usuarioId, imagem, imagemE
     content: null,
     embeds: [],
     flags: MessageFlags.IsComponentsV2,
+    components: [container],
+  };
+}
+
+function criarPayloadRelatorioSemanal(relatorios, usuarioId) {
+  const descricao = relatorios
+    .map((relatorio) => `- Semana ${relatorio.semana_referencia}: **${relatorio.total_itens}**`)
+    .join('\n');
+
+  const container = new ContainerBuilder()
+    .setAccentColor(0x2f3136)
+    .addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(
+            ['## Central de farm', 'Acompanhe abaixo o seu historico semanal de registros.'].join(
+              '\n'
+            )
+          )
+        )
+        .setThumbnailAccessory(
+          new ThumbnailBuilder().setURL(PAINEL_THUMBNAIL_URL).setDescription('VSYNC')
+        )
+    )
+    .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        ['**Resumo da central**', `**Usuario:** <@${usuarioId}>`, descricao.slice(0, 3800)].join(
+          '\n'
+        )
+      )
+    );
+
+  return {
+    content: null,
+    embeds: [],
+    flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+    components: [container],
+  };
+}
+
+function criarPayloadRelatorioGlobal(dados, totalGeral) {
+  const descricao = dados.map((user) => `- <@${user.usuario_id}>: **${user.total}**`).join('\n');
+
+  const container = new ContainerBuilder()
+    .setAccentColor(0x2f3136)
+    .addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(
+            ['## Central de farm', 'Confira o consolidado semanal de registros da faccao.'].join(
+              '\n'
+            )
+          )
+        )
+        .setThumbnailAccessory(
+          new ThumbnailBuilder().setURL(PAINEL_THUMBNAIL_URL).setDescription('VSYNC')
+        )
+    )
+    .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        ['**Resumo da central**', `**Total geral:** ${totalGeral}`, descricao.slice(0, 3800)].join(
+          '\n'
+        )
+      )
+    );
+
+  return {
+    content: null,
+    embeds: [],
+    flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+    components: [container],
+  };
+}
+
+function criarPayloadResumoFarm(agrupado, registros, usuarioId) {
+  const descricao = Object.entries(agrupado)
+    .map(([item, total]) => `- **${item}**: \`${total}\``)
+    .join('\n');
+  const totalQuantidade = Object.values(agrupado).reduce((acc, val) => acc + Number(val), 0);
+
+  const container = new ContainerBuilder()
+    .setAccentColor(0x2f3136)
+    .addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(
+            ['## Central de farm', 'Confira abaixo o resumo atual dos seus registros.'].join('\n')
+          )
+        )
+        .setThumbnailAccessory(
+          new ThumbnailBuilder().setURL(PAINEL_THUMBNAIL_URL).setDescription('VSYNC')
+        )
+    )
+    .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        [
+          '**Resumo da central**',
+          `**Usuario:** <@${usuarioId}>`,
+          `**Total de registros:** ${registros.length}`,
+          `**Quantidade total:** ${totalQuantidade}`,
+          descricao.slice(0, 3600),
+        ].join('\n')
+      )
+    );
+
+  return {
+    content: null,
+    embeds: [],
+    flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
     components: [container],
   };
 }
@@ -271,24 +382,7 @@ async function processarComando(interaction, context) {
       });
     }
 
-    const descricao = relatorios
-      .map((r) => `Semana: ${r.semana_referencia}\nTotal: ${r.total_itens}`)
-      .join('\n\n');
-
-    const embed = new EmbedBuilder()
-      .setTitle('Relatorio Semanal')
-      .setDescription(descricao.slice(0, 4000))
-      .addFields({
-        name: 'Usuario',
-        value: `<@${interaction.user.id}>`,
-        inline: false,
-      })
-      .setTimestamp();
-
-    return interaction.reply({
-      embeds: [embed],
-      ephemeral: true,
-    });
+    return interaction.reply(criarPayloadRelatorioSemanal(relatorios, interaction.user.id));
   }
 
   if (interaction.commandName === 'relatorio_global') {
@@ -301,23 +395,9 @@ async function processarComando(interaction, context) {
       });
     }
 
-    const descricao = dados.map((user) => `<@${user.usuario_id}>: **${user.total}**`).join('\n');
     const totalGeral = dados.reduce((acc, user) => acc + user.total, 0);
 
-    const embed = new EmbedBuilder()
-      .setTitle('Relatorio Global da Semana')
-      .setDescription(descricao)
-      .addFields({
-        name: 'Total Geral',
-        value: String(totalGeral),
-        inline: false,
-      })
-      .setTimestamp();
-
-    return interaction.reply({
-      embeds: [embed],
-      ephemeral: true,
-    });
+    return interaction.reply(criarPayloadRelatorioGlobal(dados, totalGeral));
   }
 
   if (interaction.commandName === 'testar_relatorio') {
@@ -598,26 +678,7 @@ async function processarBotao(interaction, context) {
       agrupado[item] += quantidade;
     }
 
-    const descricao = Object.entries(agrupado)
-      .map(([item, total]) => `**${item}**: \`${total}\``)
-      .join('\n');
-
-    const totalQuantidade = Object.values(agrupado).reduce((acc, val) => acc + Number(val), 0);
-
-    const embed = new EmbedBuilder()
-      .setTitle('Seu Farm')
-      .setDescription(descricao)
-      .addFields(
-        { name: 'Usuario', value: `<@${interaction.user.id}>`, inline: false },
-        { name: 'Total de registros', value: String(registros.length), inline: true },
-        { name: 'Quantidade total', value: String(totalQuantidade), inline: true }
-      )
-      .setTimestamp();
-
-    return interaction.reply({
-      embeds: [embed],
-      ephemeral: true,
-    });
+    return interaction.reply(criarPayloadResumoFarm(agrupado, registros, interaction.user.id));
   }
 
   if (interaction.customId === 'lavagem') {
