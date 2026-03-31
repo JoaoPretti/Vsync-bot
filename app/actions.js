@@ -118,34 +118,6 @@ function criarContainerBase() {
   return new ContainerBuilder().setAccentColor(0x2f3136);
 }
 
-function criarBotaoAba(label, style) {
-  return new ButtonBuilder()
-    .setCustomId(`aba_${label.toLowerCase()}`)
-    .setLabel(label)
-    .setStyle(style)
-    .setDisabled(true);
-}
-
-function criarAbasPainelRascunho(pronto = false) {
-  return new ActionRowBuilder().addComponents(
-    criarBotaoAba('Modelo', ButtonStyle.Secondary),
-    criarBotaoAba('Tipo', ButtonStyle.Secondary),
-    criarBotaoAba('Equipe', ButtonStyle.Secondary),
-    criarBotaoAba('Dinheiro', pronto ? ButtonStyle.Secondary : ButtonStyle.Primary),
-    criarBotaoAba('Finalizar', pronto ? ButtonStyle.Primary : ButtonStyle.Secondary)
-  );
-}
-
-function criarAbasPainelAcao(resultadoDefinido = false) {
-  return new ActionRowBuilder().addComponents(
-    criarBotaoAba('Modelo', ButtonStyle.Secondary),
-    criarBotaoAba('Tipo', ButtonStyle.Secondary),
-    criarBotaoAba('Equipe', ButtonStyle.Primary),
-    criarBotaoAba('Dinheiro', ButtonStyle.Secondary),
-    criarBotaoAba('Finalizar', resultadoDefinido ? ButtonStyle.Primary : ButtonStyle.Secondary)
-  );
-}
-
 function criarSelectRascunhoAcoes(token, tamanho, valorAtual = null) {
   const opcoes = (ACOES_DISPONIVEIS[tamanho] || []).slice(0, 25).map((acao) => ({
     label: acao.slice(0, 100),
@@ -348,7 +320,6 @@ function criarContainerRascunhoAcao(rascunho, formatarMoeda, aviso = null) {
       )
     )
     .addSeparatorComponents(criarSeparador())
-    .addActionRowComponents(criarAbasPainelRascunho(pronto))
     .addActionRowComponents(
       criarSelectRascunhoAcoes(rascunho.token, rascunho.tamanho, rascunho.nomeAcao)
     )
@@ -453,7 +424,6 @@ function criarContainerMensagemAcao(acao, participantes, formatarMoeda, desabili
       )
     )
     .addSeparatorComponents(criarSeparador())
-    .addActionRowComponents(criarAbasPainelAcao(Boolean(acao.resultado)))
     .addActionRowComponents(criarSelectResultadoAcao(acao.id, desabilitado))
     .addActionRowComponents(criarBotoesAcao(acao.id, desabilitado))
     .addActionRowComponents(criarControlesAcaoSecundarios(acao.id, desabilitado));
@@ -524,7 +494,6 @@ module.exports = {
   ACAO_RASCUNHO_MODAL_PREFIX,
   ACAO_RASCUNHO_NOME_PREFIX,
   ACAO_RASCUNHO_TIPO_PREFIX,
-  criarAbasPainelAcao,
   criarBotoesAcao,
   criarControlesAcaoSecundarios,
   criarModalDetalhesRascunhoAcao,
