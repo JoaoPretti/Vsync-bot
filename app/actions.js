@@ -128,7 +128,7 @@ function criarSelectRascunhoAcoes(token, tamanho, valorAtual = null) {
   return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId(`${ACAO_RASCUNHO_NOME_PREFIX}${token}`)
-      .setPlaceholder('Escolha o tipo de acao')
+      .setPlaceholder('Selecione a operacao')
       .addOptions(
         opcoes.length
           ? opcoes
@@ -142,7 +142,7 @@ function criarSelectRascunhoTipo(token, valorAtual = null) {
   return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId(`${ACAO_RASCUNHO_TIPO_PREFIX}${token}`)
-      .setPlaceholder('Escolha o estilo da acao')
+      .setPlaceholder('Selecione o estilo')
       .addOptions(
         ...TIPOS_ACAO.map((tipo) => ({
           label: tipo,
@@ -157,11 +157,11 @@ function criarBotoesRascunhoAcao(token, pronto = false) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`${ACAO_RASCUNHO_DETALHES_PREFIX}${token}`)
-      .setLabel('Definir detalhes')
+      .setLabel('Preencher detalhes')
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId(`${ACAO_RASCUNHO_CONFIRMAR_PREFIX}${token}`)
-      .setLabel('Criar acao')
+      .setLabel('Publicar operacao')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(!pronto)
   );
@@ -171,7 +171,7 @@ function criarSelectResultadoAcao(acaoId, desabilitado = false) {
   return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId(`${ACAO_SELECT_RESULTADO_PREFIX}${acaoId}`)
-      .setPlaceholder('Escolha o resultado final')
+      .setPlaceholder('Selecione o resultado')
       .setDisabled(desabilitado)
       .addOptions(
         { label: 'Vitoria', value: 'Vitoria' },
@@ -185,12 +185,12 @@ function criarBotoesAcao(acaoId, desabilitado = false) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`${ACAO_COMANDO_PREFIX}${acaoId}`)
-      .setLabel('Assumir comando')
+      .setLabel('Assumir lideranca')
       .setStyle(ButtonStyle.Primary)
       .setDisabled(desabilitado),
     new ButtonBuilder()
       .setCustomId(`${ACAO_FINALIZAR_PREFIX}${acaoId}`)
-      .setLabel('Finalizar')
+      .setLabel('Encerrar operacao')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(desabilitado)
   );
@@ -200,12 +200,12 @@ function criarControlesAcaoSecundarios(acaoId, desabilitado = false) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`${ACAO_ENTRAR_PREFIX}${acaoId}`)
-      .setLabel('Entrar na equipe')
+      .setLabel('Entrar na operacao')
       .setStyle(ButtonStyle.Success)
       .setDisabled(desabilitado),
     new ButtonBuilder()
       .setCustomId(`${ACAO_SAIR_PREFIX}${acaoId}`)
-      .setLabel('Sair da equipe')
+      .setLabel('Sair da operacao')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(desabilitado)
   );
@@ -215,15 +215,15 @@ function criarBotoesPainelAcoes() {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('acao_pequena')
-      .setLabel('Acoes Pequenas')
+      .setLabel('Operacao pequena')
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('acao_media')
-      .setLabel('Acoes Medias')
+      .setLabel('Operacao media')
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('acao_grande')
-      .setLabel('Acoes Grandes')
+      .setLabel('Operacao grande')
       .setStyle(ButtonStyle.Secondary)
   );
 }
@@ -234,9 +234,10 @@ function criarPainelAcoes() {
       new SectionBuilder()
         .addTextDisplayComponents(
           criarTexto(
-            ['## Central de acoes', 'Abra, acompanhe e finalize operacoes no mesmo painel.'].join(
-              '\n'
-            )
+            [
+              '## Central de acoes',
+              'Selecione o porte e siga o fluxo da operacao neste painel.',
+            ].join('\n')
           )
         )
         .setThumbnailAccessory(criarThumbnailPadrao())
@@ -245,8 +246,8 @@ function criarPainelAcoes() {
     .addTextDisplayComponents(
       criarTexto(
         [
-          '**Fluxo da operacao**',
-          '- Escolha o porte da acao.',
+          '**Fluxo da central**',
+          '- Escolha o porte da operacao.',
           '- Monte o rascunho com modelo, estilo, equipe e valor.',
           '- Publique e acompanhe tudo no mesmo card.',
         ].join('\n')
@@ -284,7 +285,7 @@ function criarContainerRascunhoAcao(rascunho, formatarMoeda, aviso = null) {
           criarTexto(
             [
               '## Central de acoes',
-              'Monte a operacao passo a passo e publique quando tudo estiver pronto.',
+              'Preencha o rascunho da operacao e publique quando tudo estiver pronto.',
             ].join('\n')
           )
         )
@@ -309,7 +310,7 @@ function criarContainerRascunhoAcao(rascunho, formatarMoeda, aviso = null) {
     .addTextDisplayComponents(
       criarTexto(
         [
-          `**Andamento: ${pronto ? '3/3 - Confirmacao' : '2/3 - Configuracao'}**`,
+          `**Andamento da central: ${pronto ? '3/3 - Confirmacao' : '2/3 - Configuracao'}**`,
           pronto
             ? 'Tudo pronto para publicar. Revise os dados e use o botao final.'
             : 'Use os menus e o botao de detalhes logo abaixo para concluir a configuracao.',
@@ -388,7 +389,7 @@ function criarContainerMensagemAcao(acao, participantes, formatarMoeda, desabili
           criarTexto(
             [
               '## Central de acoes',
-              `Acompanhe o andamento de ${acao.nome_acao || obterLabelTamanhoAcao(acao.tamanho)} em tempo real.`,
+              `Acompanhe ${acao.nome_acao || obterLabelTamanhoAcao(acao.tamanho)} em tempo real nesta central.`,
             ].join('\n')
           )
         )
@@ -413,7 +414,7 @@ function criarContainerMensagemAcao(acao, participantes, formatarMoeda, desabili
     .addTextDisplayComponents(
       criarTexto(
         [
-          `**Controle atual: ${etapaAtual}**`,
+          `**Controle da central: ${etapaAtual}**`,
           `Comando atual: ${acao.comando_texto || 'Ninguem assumiu o comando ainda'}`,
           `Resultado: ${acao.resultado || 'Em andamento'}`,
           `Abertura: <t:${Math.floor(new Date(acao.iniciado_em).getTime() / 1000)}:f>`,
@@ -445,7 +446,7 @@ function montarPayloadRascunhoConcluido(channelId) {
         criarTexto(
           [
             '## Central de acoes',
-            'Acao criada com sucesso.',
+            'Operacao criada com sucesso.',
             `A nova acao foi publicada em ${channelId ? `<#${channelId}>` : 'este canal'}.`,
             'Voce pode fechar esta mensagem.',
           ].join('\n')

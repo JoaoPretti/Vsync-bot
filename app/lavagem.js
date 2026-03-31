@@ -105,12 +105,12 @@ function criarBotoesAprovacaoLavagem(lavagemId, desabilitado = false) {
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`${LAVAGEM_APROVAR_PREFIX}${lavagemId}`)
-        .setLabel('Aprovar')
+        .setLabel('Aprovar solicitacao')
         .setStyle(ButtonStyle.Success)
         .setDisabled(desabilitado),
       new ButtonBuilder()
         .setCustomId(`${LAVAGEM_RECUSAR_PREFIX}${lavagemId}`)
-        .setLabel('Recusar')
+        .setLabel('Recusar solicitacao')
         .setStyle(ButtonStyle.Danger)
         .setDisabled(desabilitado)
     ),
@@ -134,7 +134,7 @@ function criarContainerAprovacaoLavagem(lavagem, desabilitado = false, descricao
           new TextDisplayBuilder().setContent(
             [
               '## Central de lavagem',
-              descricao || `Revise a solicitacao de ${config.titulo.toLowerCase()} abaixo.`,
+              descricao || `Revise a solicitacao de ${config.titulo.toLowerCase()} nesta central.`,
             ].join('\n')
           )
         )
@@ -148,7 +148,7 @@ function criarContainerAprovacaoLavagem(lavagem, desabilitado = false, descricao
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         [
-          '**Resumo da solicitacao**',
+          '**Resumo da central**',
           `**Grupo:** ${lavagem.grupo}`,
           `**Valor Total:** ${formatarMoeda(lavagem.quantidade)}`,
           `**Valor do Cliente:** ${formatarMoeda(lavagem.valor_cliente)}`,
@@ -184,7 +184,7 @@ function criarContainerRegistroLavagem(lavagem) {
           new TextDisplayBuilder().setContent(
             [
               '## Central de lavagem',
-              `${config.titulo} aprovada e contabilizada com sucesso.`,
+              `${config.titulo} aprovada e registrada com sucesso nesta central.`,
             ].join('\n')
           )
         )
@@ -198,7 +198,7 @@ function criarContainerRegistroLavagem(lavagem) {
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         [
-          '**Resumo do registro**',
+          '**Resumo da central**',
           `**Grupo:** ${lavagem.grupo}`,
           `**Valor Total:** ${formatarMoeda(lavagem.quantidade)}`,
           `**Valor do Cliente:** ${formatarMoeda(lavagem.valor_cliente)}`,

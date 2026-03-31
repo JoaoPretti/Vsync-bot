@@ -184,7 +184,7 @@ function criarPainel() {
   const row1 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('farm')
-      .setLabel('Verifique seu Farm')
+      .setLabel('Consultar farm')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('📑')
   );
@@ -192,12 +192,12 @@ function criarPainel() {
   const row2 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('lavagem_parceria')
-      .setLabel('Lavagem Parceria')
+      .setLabel('Registrar lavagem parceria')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('💲'),
     new ButtonBuilder()
       .setCustomId('lavagem_pista')
-      .setLabel('Lavagem Pista')
+      .setLabel('Registrar lavagem pista')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('💲')
   );
@@ -221,10 +221,10 @@ function criarPainel() {
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         [
-          '**Consultas**',
+          '**Fluxos disponiveis**',
           'Verifique como esta o andamento do seu farm semanal.',
           '',
-          '**Registros**',
+          '**Registros da faccao**',
           'Envie pedidos de lavagem e acompanhe a aprovacao da gerencia.',
         ].join('\n')
       )

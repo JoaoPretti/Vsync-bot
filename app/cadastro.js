@@ -70,7 +70,7 @@ function criarPainelCadastro() {
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(CADASTRO_BUTTON_ID)
-      .setLabel('Iniciar cadastro')
+      .setLabel('Abrir cadastro')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🪪')
   );
@@ -83,7 +83,7 @@ function criarPainelCadastro() {
           new TextDisplayBuilder().setContent(
             [
               '## Central de cadastro',
-              'Inicie seu registro e acompanhe todo o processo em um canal privado.',
+              'Abra seu registro e acompanhe cada etapa em um canal privado.',
             ].join('\n')
           )
         )
@@ -95,7 +95,7 @@ function criarPainelCadastro() {
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         [
-          '**Fluxo de cadastro**',
+          '**Fluxo da central**',
           '- Clique no botao abaixo para abrir o formulario.',
           '- Um canal privado sera criado apenas para voce e a gerencia.',
           '- Use esse canal para tirar duvidas, resolver pendencias e registrar seu farm.',
