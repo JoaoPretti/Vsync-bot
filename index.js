@@ -21,7 +21,9 @@ const {
   ACAO_RASCUNHO_MODAL_PREFIX,
   ACAO_RASCUNHO_NOME_PREFIX,
   ACAO_RASCUNHO_TIPO_PREFIX,
+  criarAbasPainelAcao,
   criarBotoesAcao,
+  criarControlesAcaoSecundarios,
   criarModalDetalhesRascunhoAcao,
   criarPainelAcoes,
   criarRascunhoAcao,
@@ -317,8 +319,10 @@ async function renderizarMensagemAcao(interactionOrChannel, acaoId, desabilitado
   const payload = {
     embeds: [criarEmbedAcao(acao, participantes, formatarMoeda)],
     components: [
+      criarAbasPainelAcao(Boolean(acao.resultado)),
       criarSelectResultadoAcao(acaoId, desabilitado),
       criarBotoesAcao(acaoId, desabilitado),
+      criarControlesAcaoSecundarios(acaoId, desabilitado),
     ],
   };
 

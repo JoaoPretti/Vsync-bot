@@ -111,6 +111,34 @@ function obterResumoRascunhoAcao(rascunho, formatarMoeda) {
   ];
 }
 
+function criarBotaoAba(label, style) {
+  return new ButtonBuilder()
+    .setCustomId(`aba_${label.toLowerCase()}`)
+    .setLabel(label)
+    .setStyle(style)
+    .setDisabled(true);
+}
+
+function criarAbasPainelRascunho(pronto = false) {
+  return new ActionRowBuilder().addComponents(
+    criarBotaoAba('Modelo', ButtonStyle.Secondary),
+    criarBotaoAba('Tipo', ButtonStyle.Secondary),
+    criarBotaoAba('Equipe', ButtonStyle.Secondary),
+    criarBotaoAba('Dinheiro', pronto ? ButtonStyle.Secondary : ButtonStyle.Primary),
+    criarBotaoAba('Finalizar', pronto ? ButtonStyle.Primary : ButtonStyle.Secondary)
+  );
+}
+
+function criarAbasPainelAcao(resultadoDefinido = false) {
+  return new ActionRowBuilder().addComponents(
+    criarBotaoAba('Modelo', ButtonStyle.Secondary),
+    criarBotaoAba('Tipo', ButtonStyle.Secondary),
+    criarBotaoAba('Equipe', ButtonStyle.Primary),
+    criarBotaoAba('Dinheiro', ButtonStyle.Secondary),
+    criarBotaoAba('Finalizar', resultadoDefinido ? ButtonStyle.Primary : ButtonStyle.Secondary)
+  );
+}
+
 function criarEmbedRascunhoAcao(rascunho, formatarMoeda) {
   const pronto = rascunhoAcaoEstaPronto(rascunho);
 
@@ -192,6 +220,7 @@ function montarPayloadRascunhoAcao(rascunho, formatarMoeda) {
   return {
     embeds: [criarEmbedRascunhoAcao(rascunho, formatarMoeda)],
     components: [
+      criarAbasPainelRascunho(rascunhoAcaoEstaPronto(rascunho)),
       criarSelectRascunhoAcoes(rascunho.token, rascunho.tamanho, rascunho.nomeAcao),
       criarSelectRascunhoTipo(rascunho.token, rascunho.tipoAcao),
       criarBotoesRascunhoAcao(rascunho.token, rascunhoAcaoEstaPronto(rascunho)),
@@ -300,24 +329,29 @@ function criarSelectResultadoAcao(acaoId, desabilitado = false) {
 function criarBotoesAcao(acaoId, desabilitado = false) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId(`${ACAO_ENTRAR_PREFIX}${acaoId}`)
-      .setLabel('Entrar')
-      .setStyle(ButtonStyle.Secondary)
-      .setDisabled(desabilitado),
-    new ButtonBuilder()
-      .setCustomId(`${ACAO_SAIR_PREFIX}${acaoId}`)
-      .setLabel('Sair')
-      .setStyle(ButtonStyle.Secondary)
-      .setDisabled(desabilitado),
-    new ButtonBuilder()
       .setCustomId(`${ACAO_COMANDO_PREFIX}${acaoId}`)
       .setLabel('Assumir comando')
-      .setStyle(ButtonStyle.Secondary)
+      .setStyle(ButtonStyle.Primary)
       .setDisabled(desabilitado),
     new ButtonBuilder()
       .setCustomId(`${ACAO_FINALIZAR_PREFIX}${acaoId}`)
       .setLabel('Finalizar')
-      .setStyle(ButtonStyle.Primary)
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(desabilitado)
+  );
+}
+
+function criarControlesAcaoSecundarios(acaoId, desabilitado = false) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`${ACAO_ENTRAR_PREFIX}${acaoId}`)
+      .setLabel('Entrar na equipe')
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(desabilitado),
+    new ButtonBuilder()
+      .setCustomId(`${ACAO_SAIR_PREFIX}${acaoId}`)
+      .setLabel('Sair da equipe')
+      .setStyle(ButtonStyle.Secondary)
       .setDisabled(desabilitado)
   );
 }
@@ -398,7 +432,9 @@ module.exports = {
   ACAO_RASCUNHO_MODAL_PREFIX,
   ACAO_RASCUNHO_NOME_PREFIX,
   ACAO_RASCUNHO_TIPO_PREFIX,
+  criarAbasPainelAcao,
   criarBotoesAcao,
+  criarControlesAcaoSecundarios,
   criarModalDetalhesRascunhoAcao,
   criarPainelAcoes,
   criarRascunhoAcao,
