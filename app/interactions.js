@@ -69,7 +69,6 @@ function criarPayloadRegistroFarm({ item, quantidade, usuarioId, imagem, imagemE
   }
 
   return {
-    content: null,
     embeds: [],
     flags: MessageFlags.IsComponentsV2,
     components: [container],
@@ -106,7 +105,6 @@ function criarPayloadRelatorioSemanal(relatorios, usuarioId) {
     );
 
   return {
-    content: null,
     embeds: [],
     flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
     components: [container],
@@ -141,7 +139,6 @@ function criarPayloadRelatorioGlobal(dados, totalGeral) {
     );
 
   return {
-    content: null,
     embeds: [],
     flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
     components: [container],
@@ -181,7 +178,6 @@ function criarPayloadResumoFarm(agrupado, registros, usuarioId) {
     );
 
   return {
-    content: null,
     embeds: [],
     flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
     components: [container],

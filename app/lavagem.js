@@ -165,7 +165,6 @@ function criarContainerAprovacaoLavagem(lavagem, desabilitado = false, descricao
 
 function montarPayloadAprovacaoLavagem(lavagem, desabilitado = false, descricao = null) {
   return {
-    content: null,
     embeds: [],
     flags: MessageFlags.IsComponentsV2,
     components: [criarContainerAprovacaoLavagem(lavagem, desabilitado, descricao)],
@@ -215,7 +214,6 @@ function criarContainerRegistroLavagem(lavagem) {
 
 function montarPayloadRegistroLavagem(lavagem) {
   return {
-    content: null,
     embeds: [],
     flags: MessageFlags.IsComponentsV2,
     components: [criarContainerRegistroLavagem(lavagem)],

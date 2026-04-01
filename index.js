@@ -233,7 +233,6 @@ function criarPainel() {
     .addActionRowComponents(row2);
 
   return {
-    content: null,
     embeds: [],
     flags: MessageFlags.IsComponentsV2,
     components: [container],
@@ -262,7 +261,6 @@ async function publicarOuAtualizarPainelPrincipal() {
   );
 
   const payload = {
-    content: painel.content,
     embeds: painel.embeds,
     flags: painel.flags,
     components: painel.components,
@@ -298,7 +296,6 @@ async function publicarOuAtualizarPainelAcoes() {
   );
 
   const payload = {
-    content: painel.content,
     embeds: painel.embeds,
     flags: painel.flags,
     components: painel.components,
@@ -334,7 +331,6 @@ async function publicarOuAtualizarPainelCadastro() {
   );
 
   const payload = {
-    content: painel.content,
     embeds: painel.embeds,
     flags: painel.flags,
     components: painel.components,

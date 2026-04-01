@@ -256,7 +256,6 @@ function criarPainelAcoes() {
 
   return {
     identificador: 'painel_acoes_v2',
-    content: null,
     embeds: [],
     flags: MessageFlags.IsComponentsV2,
     components: [container],
@@ -330,7 +329,6 @@ function montarPayloadRascunhoAcao(rascunho, formatarMoeda, options = {}) {
   const { ephemeral = false, aviso = null } = options;
 
   return {
-    content: null,
     embeds: [],
     flags: ephemeral
       ? combinarFlags(MessageFlags.Ephemeral, MessageFlags.IsComponentsV2)
@@ -428,7 +426,6 @@ function criarContainerMensagemAcao(acao, participantes, formatarMoeda, desabili
 
 function montarPayloadMensagemAcao(acao, participantes, formatarMoeda, desabilitado = false) {
   return {
-    content: null,
     embeds: [],
     flags: MessageFlags.IsComponentsV2,
     components: [criarContainerMensagemAcao(acao, participantes, formatarMoeda, desabilitado)],
@@ -437,7 +434,6 @@ function montarPayloadMensagemAcao(acao, participantes, formatarMoeda, desabilit
 
 function montarPayloadRascunhoConcluido(channelId) {
   return {
-    content: null,
     embeds: [],
     flags: MessageFlags.IsComponentsV2,
     components: [
@@ -500,7 +496,6 @@ function criarContainerLogAcao(acao, participantes, formatarMoeda) {
 
 function montarPayloadLogAcao(acao, participantes, formatarMoeda) {
   return {
-    content: null,
     embeds: [],
     flags: MessageFlags.IsComponentsV2,
     components: [criarContainerLogAcao(acao, participantes, formatarMoeda)],

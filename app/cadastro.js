@@ -105,7 +105,6 @@ function criarPainelCadastro() {
 
   return {
     identificador: 'painel_cadastro_v2',
-    content: null,
     embeds: [],
     flags: MessageFlags.IsComponentsV2,
     components: [container],
@@ -263,6 +262,8 @@ async function enviarMensagemCanalCadastro(
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         [
+          `<@${usuarioId}>`,
+          '',
           `Bem-vindo, <@${usuarioId}>.`,
           '',
           `**Personagem:** ${nomeFormatado}`,
@@ -274,7 +275,6 @@ async function enviarMensagemCanalCadastro(
     );
 
   await canal.send({
-    content: `<@${usuarioId}>`,
     embeds: [],
     flags: MessageFlags.IsComponentsV2,
     components: [container],
