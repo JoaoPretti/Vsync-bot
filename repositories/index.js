@@ -8,11 +8,7 @@ async function garantirComandoTextoNullable() {
 }
 
 function erroSchemaLegadoComandoTexto(error) {
-  return (
-    error?.code === '23502' &&
-    error?.table === 'acoes' &&
-    error?.column === 'comando_texto'
-  );
+  return error?.code === '23502' && error?.table === 'acoes' && error?.column === 'comando_texto';
 }
 
 async function salvarRegistroBanco(dados) {
