@@ -13,7 +13,7 @@ const ITENS = [
 const commands = [
   new SlashCommandBuilder()
     .setName('registrar_farm')
-    .setDescription('Registra um item com quantidade e imagem obrigatória')
+    .setDescription('Registra um item com quantidade e exige foto ou link da prova')
     .addStringOption((option) =>
       option
         .setName('item')
@@ -25,10 +25,16 @@ const commands = [
       option.setName('quantidade').setDescription('Quantidade').setRequired(true)
     )
     .addAttachmentOption((option) =>
-      option.setName('foto').setDescription('Foto da prova do farm').setRequired(false)
+      option
+        .setName('foto')
+        .setDescription('Foto da prova do farm (envie este campo ou o link)')
+        .setRequired(false)
     )
     .addStringOption((option) =>
-      option.setName('link').setDescription('Link da imagem da prova do farm').setRequired(false)
+      option
+        .setName('link')
+        .setDescription('Link da prova do farm (informe este campo ou a foto)')
+        .setRequired(false)
     ),
 
   new SlashCommandBuilder().setName('painel').setDescription('Abre o painel central'),
