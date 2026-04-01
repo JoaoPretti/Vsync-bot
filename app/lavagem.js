@@ -15,6 +15,7 @@ const {
 } = require('discord.js');
 
 const {
+  CADASTRO_THUMBNAIL_URL,
   CANAL_APROVACAO_LAVAGEM_ID,
   CANAL_REGISTRO_LAVAGEM_ID,
   LAVAGEM_APROVAR_PREFIX,
@@ -116,6 +117,10 @@ function criarBotoesAprovacaoLavagem(lavagemId, desabilitado = false) {
   ];
 }
 
+function criarThumbnailLavagem() {
+  return new ThumbnailBuilder().setURL(CADASTRO_THUMBNAIL_URL).setDescription('VSYNC');
+}
+
 function criarContainerAprovacaoLavagem(lavagem, desabilitado = false, descricao = null) {
   const config = obterConfigLavagem(lavagem.tipo);
   const statusTexto =
@@ -137,11 +142,7 @@ function criarContainerAprovacaoLavagem(lavagem, desabilitado = false, descricao
             ].join('\n')
           )
         )
-        .setThumbnailAccessory(
-          new ThumbnailBuilder()
-            .setURL('https://cdn.discordapp.com/embed/avatars/0.png')
-            .setDescription('Lavagem')
-        )
+        .setThumbnailAccessory(criarThumbnailLavagem())
     )
     .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
     .addTextDisplayComponents(
@@ -186,11 +187,7 @@ function criarContainerRegistroLavagem(lavagem) {
             ].join('\n')
           )
         )
-        .setThumbnailAccessory(
-          new ThumbnailBuilder()
-            .setURL('https://cdn.discordapp.com/embed/avatars/0.png')
-            .setDescription('Lavagem')
-        )
+        .setThumbnailAccessory(criarThumbnailLavagem())
     )
     .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
     .addTextDisplayComponents(
