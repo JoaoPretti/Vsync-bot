@@ -325,8 +325,8 @@ async function publicarOuAtualizarPainelCadastro() {
     return;
   }
 
-  const mensagens = await canal.messages.fetch({ limit: 20 });
-  const mensagemExistente = mensagens.find(
+  const mensagens = await canal.messages.fetch({ limit: 100 });
+  const mensagensExistentes = mensagens.filter(
     (message) =>
       message.author.id === client.user.id &&
       (message.embeds.some((embed) => embed.title === 'Registro no Discord') ||
@@ -340,9 +340,12 @@ async function publicarOuAtualizarPainelCadastro() {
     components: painel.components,
   };
 
-  if (mensagemExistente) {
-    await mensagemExistente.edit(payload);
-    return;
+  if (mensagensExistentes.size) {
+    for (const mensagem of mensagensExistentes.values()) {
+      await mensagem.delete().catch((error) => {
+        console.error('Erro ao remover painel de cadastro antigo:', error);
+      });
+    }
   }
 
   await canal.send(payload);
