@@ -4,7 +4,6 @@ const {
   ButtonStyle,
   ChannelType,
   ContainerBuilder,
-  EmbedBuilder,
   MessageFlags,
   ModalBuilder,
   PermissionFlagsBits,
@@ -249,22 +248,37 @@ async function enviarMensagemCanalCadastro(
     descricaoFinal = 'Use este canal para falar com a gerência, tirar dúvidas e acompanhar seu processo.',
   } = {}
 ) {
-  const embedCanal = new EmbedBuilder()
-    .setColor(0x2f3136)
-    .setTitle(titulo)
-    .setDescription(
-      [
-        `Bem-vindo, <@${usuarioId}>.`,
-        '',
-        `**Personagem:** ${nomeFormatado}`,
-        `**ID:** ${personagemId}`,
-        '',
-        descricaoFinal,
-      ].join('\n')
+  const container = new ContainerBuilder()
+    .setAccentColor(0x2f3136)
+    .addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(['## Central de cadastro', titulo].join('\n'))
+        )
+        .setThumbnailAccessory(
+          new ThumbnailBuilder().setURL(CADASTRO_THUMBNAIL_URL).setDescription('VSYNC')
+        )
     )
-    .setTimestamp();
+    .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        [
+          `Bem-vindo, <@${usuarioId}>.`,
+          '',
+          `**Personagem:** ${nomeFormatado}`,
+          `**ID:** ${personagemId}`,
+          '',
+          descricaoFinal,
+        ].join('\n')
+      )
+    );
 
-  await canal.send({ content: `<@${usuarioId}>`, embeds: [embedCanal] });
+  await canal.send({
+    content: `<@${usuarioId}>`,
+    embeds: [],
+    flags: MessageFlags.IsComponentsV2,
+    components: [container],
+  });
 }
 
 async function processarCadastro(interaction) {

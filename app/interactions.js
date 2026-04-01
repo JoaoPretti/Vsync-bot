@@ -200,7 +200,7 @@ async function processarComando(interaction, context) {
     processarRelatorioSemanal,
     resolverUrlImagem,
     publicarOuAtualizarPainelAcoes,
-    criarPainelCadastro,
+    publicarOuAtualizarPainelCadastro,
   } = context;
 
   if (interaction.commandName === 'painel_acoes') {
@@ -227,11 +227,10 @@ async function processarComando(interaction, context) {
       });
     }
 
-    const painelCadastro = criarPainelCadastro();
-    await interaction.channel.send(painelCadastro);
+    await publicarOuAtualizarPainelCadastro();
 
     return interaction.reply({
-      content: 'Painel de cadastro publicado neste canal.',
+      content: `Painel de cadastro sincronizado no canal <#${process.env.PAINEL_CADASTRO_CANAL_ID}>.`,
       ephemeral: true,
     });
   }

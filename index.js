@@ -649,6 +649,7 @@ client.on('interactionCreate', async (interaction) =>
     processarModalLavagem,
     processarRelatorioSemanal,
     publicarOuAtualizarPainelAcoes,
+    publicarOuAtualizarPainelCadastro,
     rascunhoAcaoEstaPronto,
     removerParticipanteAcao,
     removerRascunhoAcao,
