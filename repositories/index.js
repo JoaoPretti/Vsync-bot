@@ -1,5 +1,20 @@
 const db = require('../database/db');
 
+async function garantirComandoTextoNullable() {
+  await db.query(`
+    ALTER TABLE acoes
+    ALTER COLUMN comando_texto DROP NOT NULL
+  `);
+}
+
+function erroSchemaLegadoComandoTexto(error) {
+  return (
+    error?.code === '23502' &&
+    error?.table === 'acoes' &&
+    error?.column === 'comando_texto'
+  );
+}
+
 async function salvarRegistroBanco(dados) {
   await db.query(
     `
@@ -230,43 +245,54 @@ async function buscarCadastroPorPersonagemId(personagemId) {
 }
 
 async function salvarAcao(dados) {
-  const result = await db.query(
-    `
-      INSERT INTO acoes (
-        tamanho,
-        nome_acao,
-        comando_texto,
-        quantidade_participantes,
-        tipo_acao,
-        resultado,
-        dinheiro,
-        criador_id,
-        criador_tag,
-        canal_id,
-        mensagem_id,
-        status,
-        iniciado_em,
-        finalizado_em
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
-      RETURNING *
-    `,
-    [
-      dados.tamanho,
-      dados.nomeAcao || null,
-      dados.comandoTexto,
-      dados.quantidadeParticipantes,
-      dados.tipoAcao || null,
-      dados.resultado || null,
-      dados.dinheiro,
-      dados.criadorId,
-      dados.criadorTag,
-      dados.canalId,
-      dados.mensagemId || null,
-      dados.status || 'em_andamento',
-      dados.iniciadoEm,
-      dados.finalizadoEm || null,
-    ]
-  );
+  const sql = `
+    INSERT INTO acoes (
+      tamanho,
+      nome_acao,
+      comando_texto,
+      quantidade_participantes,
+      tipo_acao,
+      resultado,
+      dinheiro,
+      criador_id,
+      criador_tag,
+      canal_id,
+      mensagem_id,
+      status,
+      iniciado_em,
+      finalizado_em
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+    RETURNING *
+  `;
+  const values = [
+    dados.tamanho,
+    dados.nomeAcao || null,
+    dados.comandoTexto ?? null,
+    dados.quantidadeParticipantes,
+    dados.tipoAcao || null,
+    dados.resultado || null,
+    dados.dinheiro,
+    dados.criadorId,
+    dados.criadorTag,
+    dados.canalId,
+    dados.mensagemId || null,
+    dados.status || 'em_andamento',
+    dados.iniciadoEm,
+    dados.finalizadoEm || null,
+  ];
+
+  let result;
+
+  try {
+    result = await db.query(sql, values);
+  } catch (error) {
+    if (!erroSchemaLegadoComandoTexto(error)) {
+      throw error;
+    }
+
+    await garantirComandoTextoNullable();
+    result = await db.query(sql, values);
+  }
 
   return result.rows[0];
 }
@@ -313,15 +339,24 @@ async function atualizarCampoAcao(acaoId, campo, valor) {
     throw new Error('Campo de ação não permitido.');
   }
 
-  const result = await db.query(
-    `
-      UPDATE acoes
-      SET ${campo} = $1
-      WHERE id = $2
-      RETURNING *
-    `,
-    [valor, acaoId]
-  );
+  const sql = `
+    UPDATE acoes
+    SET ${campo} = $1
+    WHERE id = $2
+    RETURNING *
+  `;
+  let result;
+
+  try {
+    result = await db.query(sql, [valor, acaoId]);
+  } catch (error) {
+    if (!(campo === 'comando_texto' && valor == null && erroSchemaLegadoComandoTexto(error))) {
+      throw error;
+    }
+
+    await garantirComandoTextoNullable();
+    result = await db.query(sql, [valor, acaoId]);
+  }
 
   return result.rows[0] || null;
 }
