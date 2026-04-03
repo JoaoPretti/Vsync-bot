@@ -421,9 +421,8 @@ async function processarCadastro(interaction, client) {
       throw new Error('Você já possui uma solicitação de cadastro pendente de aprovação.');
     }
 
-    const solicitacaoPendentePersonagem = await buscarSolicitacaoCadastroPendentePorPersonagemId(
-      personagemId
-    );
+    const solicitacaoPendentePersonagem =
+      await buscarSolicitacaoCadastroPendentePorPersonagemId(personagemId);
 
     if (
       solicitacaoPendentePersonagem &&
@@ -450,9 +449,15 @@ async function processarCadastro(interaction, client) {
       atualizadoEm: new Date(),
     });
 
-    const mensagemAprovacao = await canalAprovacao.send(montarPayloadSolicitacaoCadastro(solicitacao));
+    const mensagemAprovacao = await canalAprovacao.send(
+      montarPayloadSolicitacaoCadastro(solicitacao)
+    );
 
-    await atualizarMensagemAprovacaoCadastro(solicitacao.id, mensagemAprovacao.id, canalAprovacao.id);
+    await atualizarMensagemAprovacaoCadastro(
+      solicitacao.id,
+      mensagemAprovacao.id,
+      canalAprovacao.id
+    );
 
     return interaction.editReply({
       content: 'Cadastro enviado para aprovação da gerência com sucesso.',
@@ -469,8 +474,8 @@ function usuarioPodeGerenciarCadastro(interaction) {
 
   return Boolean(
     interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) ||
-      interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild) ||
-      (cargoGerenciaId && interaction.member?.roles?.cache?.has(cargoGerenciaId))
+    interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild) ||
+    (cargoGerenciaId && interaction.member?.roles?.cache?.has(cargoGerenciaId))
   );
 }
 
