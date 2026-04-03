@@ -61,6 +61,44 @@ function calcularValoresLavagem(quantidade, taxaPercentual) {
   };
 }
 
+function formatarDataHoraBr(data) {
+  const valorData = data ? new Date(data) : new Date();
+
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(valorData);
+}
+
+function gerarNotaFiscalLavagem(data) {
+  const valorData = data ? new Date(data) : new Date();
+  const partes = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  })
+    .formatToParts(valorData)
+    .reduce((acc, part) => {
+      if (part.type !== 'literal') {
+        acc[part.type] = part.value;
+      }
+
+      return acc;
+    }, {});
+
+  return `${partes.year}${partes.month}${partes.day}${partes.hour}${partes.minute}${partes.second}`;
+}
+
 function criarModalLavagem(tipo) {
   const config = obterConfigLavagem(tipo);
   const modal = new ModalBuilder()
@@ -174,16 +212,19 @@ function montarPayloadAprovacaoLavagem(lavagem, desabilitado = false, descricao 
 
 function criarContainerRegistroLavagem(lavagem) {
   const config = obterConfigLavagem(lavagem.tipo);
+  const notaFiscal = gerarNotaFiscalLavagem(lavagem.criado_em || lavagem.atualizado_em);
+  const dataHora = formatarDataHoraBr(lavagem.criado_em || lavagem.atualizado_em);
+  const subtitulo = config.titulo.replace('Lavagem ', '');
 
   return new ContainerBuilder()
-    .setAccentColor(config.cor)
+    .setAccentColor(0x57f287)
     .addSectionComponents(
       new SectionBuilder()
         .addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
             [
               '## Central de lavagem',
-              `${config.titulo} aprovada e registrada com sucesso nesta central.`,
+              `✅ Lavagem Confirmada - ${subtitulo} | NF ${notaFiscal}`,
             ].join('\n')
           )
         )
@@ -193,16 +234,33 @@ function criarContainerRegistroLavagem(lavagem) {
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         [
-          '**Resumo da central**',
-          `**Grupo:** ${lavagem.grupo}`,
-          `**Valor Total:** ${formatarMoeda(lavagem.quantidade)}`,
-          `**Valor do Cliente:** ${formatarMoeda(lavagem.valor_cliente)}`,
-          `**Valor da Facção:** ${formatarMoeda(lavagem.valor_faccao)}`,
-          `**Taxa:** ${lavagem.taxa_percentual}%`,
-          `**Usuário:** <@${lavagem.usuario_id}>`,
-          `**Passaporte:** ${lavagem.personagem_id}`,
-          `**Aprovado por:** ${
-            lavagem.aprovado_por_id ? `<@${lavagem.aprovado_por_id}>` : 'Não informado'
+          `• Lavagem — ${formatarMoeda(lavagem.quantidade)}`,
+          `• Taxa de Lavagem: ${lavagem.taxa_percentual}%`,
+          '',
+          `Valor para facção — ${formatarMoeda(lavagem.valor_faccao)}`,
+          '```',
+          `${Number(lavagem.valor_faccao || 0)}`,
+          '```',
+          '',
+          `Valor do cliente — ${formatarMoeda(lavagem.valor_cliente)}`,
+          '```',
+          `${Number(lavagem.valor_cliente || 0)}`,
+          '```',
+          `**Grupo:**`,
+          `${lavagem.grupo}`,
+          `**Total Cliente:**`,
+          `${formatarMoeda(lavagem.valor_cliente)}`,
+          `**Quem:**`,
+          `<@${lavagem.usuario_id}> | ${lavagem.personagem_id}`,
+          `**Data e Hora:**`,
+          `${dataHora}`,
+          `**Nota Fiscal:**`,
+          `${notaFiscal}`,
+          `**Status:**`,
+          `${
+            lavagem.aprovado_por_id
+              ? `✅ Confirmado por <@${lavagem.aprovado_por_id}>`
+              : '✅ Confirmado'
           }`,
         ].join('\n')
       )

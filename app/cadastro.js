@@ -95,9 +95,9 @@ function criarPainelCadastro() {
       new TextDisplayBuilder().setContent(
         [
           '**Fluxo da central**',
-          '- Clique no botao abaixo para abrir o formulario.',
-          '- Um canal privado sera criado apenas para voce e a gerencia.',
-          '- Use esse canal para tirar duvidas, resolver pendencias e registrar seu farm.',
+          '- Clique no botão abaixo para abrir o formulário.',
+          '- Um canal privado será criado apenas para você e a gerência.',
+          '- Use esse canal para tirar dúvidas, resolver pendências e registrar seu farm.',
         ].join('\n')
       )
     )
@@ -186,11 +186,11 @@ async function aplicarCadastroUsuario(guild, user, nomeBruto, personagemId, opco
   const nomeFormatado = capitalizarNomePersonagem(nomeBruto);
 
   if (!nomeFormatado || nomeFormatado.length < 3) {
-    throw new Error('Informe um nome de personagem valido.');
+    throw new Error('Informe um nome de personagem válido.');
   }
 
   if (!/^\d+$/.test(personagemId)) {
-    throw new Error('O ID do personagem deve conter apenas numeros.');
+    throw new Error('O ID do personagem deve conter apenas números.');
   }
 
   await validarCadastroExistenteUsuario(user.id, { permitirEdicao });
@@ -198,7 +198,7 @@ async function aplicarCadastroUsuario(guild, user, nomeBruto, personagemId, opco
   const conflitoCadastro = await validarPersonagemIdDisponivel(personagemId, user.id);
 
   if (conflitoCadastro) {
-    throw new Error(`O ID ${personagemId} ja esta cadastrado para outro usuario.`);
+    throw new Error(`O ID ${personagemId} já está cadastrado para outro usuário.`);
   }
 
   const membro = await guild.members.fetch(user.id);
@@ -206,7 +206,7 @@ async function aplicarCadastroUsuario(guild, user, nomeBruto, personagemId, opco
   const canal = await criarOuAtualizarCanalCadastro(guild, membro, nomeFormatado, personagemId);
 
   await membro.setNickname(apelido).catch((error) => {
-    console.error(`Nao foi possivel alterar o apelido de ${user.tag}:`, error);
+    console.error(`Não foi possível alterar o apelido de ${user.tag}:`, error);
   });
 
   if (process.env.CARGO_CADASTRADO_ID) {
@@ -245,8 +245,8 @@ async function enviarMensagemCanalCadastro(
   {
     titulo = 'Bem Vindo!',
     descricaoFinal = [
-      'Essa e a sua **sala privada**, onde **so voce e a gerencia** tem acesso.',
-      'Aqui e o espaco pra tirar duvidas, resolver pendencias e registrar farm.',
+      'Essa é a sua **sala privada**, onde **só você e a gerência** têm acesso.',
+      'Aqui é o espaço pra tirar dúvidas, resolver pendências e registrar farm.',
     ].join('\n'),
   } = {}
 ) {
@@ -270,7 +270,7 @@ async function enviarMensagemCanalCadastro(
           descricaoFinal,
           '',
           '🔥 **Importante:**',
-          'Faca o registro de farm usando comando aqui na sala',
+          'Faça o registro de farm usando comando aqui na sala',
           '',
           '```',
           '/registrar_farm',
@@ -289,7 +289,7 @@ async function enviarMensagemCanalCadastro(
 async function processarCadastro(interaction) {
   if (!interaction.inGuild()) {
     return interaction.reply({
-      content: 'Esse cadastro so pode ser feito dentro do servidor.',
+      content: 'Esse cadastro só pode ser feito dentro do servidor.',
       ephemeral: true,
     });
   }
@@ -311,7 +311,7 @@ async function processarCadastro(interaction) {
     );
   } catch (error) {
     return interaction.editReply({
-      content: error.message || 'Nao foi possivel concluir o cadastro.',
+      content: error.message || 'Não foi possível concluir o cadastro.',
     });
   }
 
@@ -323,7 +323,7 @@ async function processarCadastro(interaction) {
   );
 
   return interaction.editReply({
-    content: `Cadastro concluido com sucesso. Seu canal foi criado em <#${resultadoCadastro.canal.id}>.`,
+    content: `Cadastro concluído com sucesso. Seu canal foi criado em <#${resultadoCadastro.canal.id}>.`,
   });
 }
 
