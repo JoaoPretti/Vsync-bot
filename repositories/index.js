@@ -240,6 +240,140 @@ async function buscarCadastroPorPersonagemId(personagemId) {
   return result.rows[0] || null;
 }
 
+async function salvarSolicitacaoCadastro(dados) {
+  const result = await db.query(
+    `
+      INSERT INTO cadastro_solicitacoes (
+        discord_user_id,
+        discord_tag,
+        guild_id,
+        personagem_nome,
+        personagem_nome_formatado,
+        personagem_id,
+        status,
+        mensagem_aprovacao_id,
+        canal_aprovacao_id,
+        criado_em,
+        atualizado_em
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+      RETURNING *
+    `,
+    [
+      dados.discordUserId,
+      dados.discordTag,
+      dados.guildId,
+      dados.personagemNome,
+      dados.personagemNomeFormatado,
+      dados.personagemId,
+      dados.status || 'pendente',
+      dados.mensagemAprovacaoId || null,
+      dados.canalAprovacaoId || null,
+      dados.criadoEm,
+      dados.atualizadoEm,
+    ]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function atualizarMensagemAprovacaoCadastro(solicitacaoId, mensagemId, canalId) {
+  const result = await db.query(
+    `
+      UPDATE cadastro_solicitacoes
+      SET mensagem_aprovacao_id = $1,
+          canal_aprovacao_id = $2,
+          atualizado_em = $3
+      WHERE id = $4
+      RETURNING *
+    `,
+    [mensagemId, canalId, new Date(), solicitacaoId]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function buscarSolicitacaoCadastroPorId(solicitacaoId) {
+  const result = await db.query(
+    `
+      SELECT *
+      FROM cadastro_solicitacoes
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [solicitacaoId]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function buscarSolicitacaoCadastroPendentePorUsuario(discordUserId) {
+  const result = await db.query(
+    `
+      SELECT *
+      FROM cadastro_solicitacoes
+      WHERE discord_user_id = $1
+        AND status = 'pendente'
+      ORDER BY id DESC
+      LIMIT 1
+    `,
+    [discordUserId]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function buscarSolicitacaoCadastroPendentePorPersonagemId(personagemId) {
+  const result = await db.query(
+    `
+      SELECT *
+      FROM cadastro_solicitacoes
+      WHERE personagem_id = $1
+        AND status = 'pendente'
+      ORDER BY id DESC
+      LIMIT 1
+    `,
+    [personagemId]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function aprovarSolicitacaoCadastro(solicitacaoId, aprovador) {
+  const result = await db.query(
+    `
+      UPDATE cadastro_solicitacoes
+      SET status = 'aprovada',
+          aprovado_por_id = $1,
+          aprovado_por_tag = $2,
+          atualizado_em = $3
+      WHERE id = $4
+        AND status = 'pendente'
+      RETURNING *
+    `,
+    [aprovador.id, aprovador.tag, new Date(), solicitacaoId]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function recusarSolicitacaoCadastro(solicitacaoId, recusador) {
+  const result = await db.query(
+    `
+      UPDATE cadastro_solicitacoes
+      SET status = 'recusada',
+          recusado_por_id = $1,
+          recusado_por_tag = $2,
+          atualizado_em = $3
+      WHERE id = $4
+        AND status = 'pendente'
+      RETURNING *
+    `,
+    [recusador.id, recusador.tag, new Date(), solicitacaoId]
+  );
+
+  return result.rows[0] || null;
+}
+
 async function salvarAcao(dados) {
   const sql = `
     INSERT INTO acoes (
@@ -511,9 +645,11 @@ async function recusarLavagem(lavagemId, recusador) {
 
 module.exports = {
   adicionarParticipanteAcao,
+  aprovarSolicitacaoCadastro,
   aprovarLavagem,
   atualizarCampoAcao,
   atualizarMensagemAcao,
+  atualizarMensagemAprovacaoCadastro,
   atualizarMensagemAprovacaoLavagem,
   buscarAcaoPorId,
   buscarCadastroPorPersonagemId,
@@ -523,15 +659,20 @@ module.exports = {
   buscarRegistrosFarmPorUsuario,
   buscarRelatoriosUsuario,
   buscarResumoSemanalGlobal,
+  buscarSolicitacaoCadastroPendentePorPersonagemId,
+  buscarSolicitacaoCadastroPendentePorUsuario,
+  buscarSolicitacaoCadastroPorId,
   buscarTotalFarmPorUsuario,
   buscarUsuariosComFarm,
   manterUltimos52RelatoriosPorUsuario,
+  recusarSolicitacaoCadastro,
   recusarLavagem,
   removerParticipanteAcao,
   resetarFarmUsuario,
   salvarAcao,
   salvarLavagem,
   salvarOuAtualizarCadastro,
+  salvarSolicitacaoCadastro,
   salvarRegistroBanco,
   salvarRelatorioSemanal,
   validarCadastroExistenteUsuario,

@@ -38,6 +38,7 @@ const {
 } = require('./app/actions');
 const {
   aplicarCadastroUsuario,
+  aprovarOuRecusarCadastro,
   criarModalCadastro,
   criarPainelCadastro,
   enviarMensagemCanalCadastro,
@@ -625,6 +626,7 @@ client.on('interactionCreate', async (interaction) =>
     ACAO_RASCUNHO_TIPO_PREFIX,
     adicionarParticipanteAcao,
     aplicarCadastroUsuario,
+    aprovarOuRecusarCadastro,
     atualizarCampoAcao,
     buscarAcaoPorId,
     buscarCadastroPorUsuario,

@@ -138,6 +138,28 @@ async function initDatabase() {
     )
   `);
 
+  console.log('INIT 4.1 - criando tabela cadastro_solicitacoes');
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS cadastro_solicitacoes (
+      id SERIAL PRIMARY KEY,
+      discord_user_id TEXT NOT NULL,
+      discord_tag TEXT NOT NULL,
+      guild_id TEXT NOT NULL,
+      personagem_nome TEXT NOT NULL,
+      personagem_nome_formatado TEXT NOT NULL,
+      personagem_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pendente',
+      aprovado_por_id TEXT,
+      aprovado_por_tag TEXT,
+      recusado_por_id TEXT,
+      recusado_por_tag TEXT,
+      mensagem_aprovacao_id TEXT,
+      canal_aprovacao_id TEXT,
+      criado_em TIMESTAMP NOT NULL,
+      atualizado_em TIMESTAMP NOT NULL
+    )
+  `);
+
   console.log('INIT 5 - criando tabela acoes');
   await db.query(`
     CREATE TABLE IF NOT EXISTS acoes (
@@ -185,6 +207,20 @@ async function initDatabase() {
     `
       CREATE INDEX IF NOT EXISTS idx_lavagens_usuario_status
       ON lavagens (usuario_id, status, criado_em DESC)
+    `
+  );
+  await criarIndice(
+    'idx_cadastro_solicitacoes_usuario_status',
+    `
+      CREATE INDEX IF NOT EXISTS idx_cadastro_solicitacoes_usuario_status
+      ON cadastro_solicitacoes (discord_user_id, status, criado_em DESC)
+    `
+  );
+  await criarIndice(
+    'idx_cadastro_solicitacoes_personagem_status',
+    `
+      CREATE INDEX IF NOT EXISTS idx_cadastro_solicitacoes_personagem_status
+      ON cadastro_solicitacoes (personagem_id, status, criado_em DESC)
     `
   );
   await criarIndice(

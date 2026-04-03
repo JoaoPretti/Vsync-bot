@@ -17,8 +17,10 @@ const {
   ACAO_FINALIZAR_PREFIX,
   ACAO_SAIR_PREFIX,
   ACAO_SELECT_RESULTADO_PREFIX,
+  CADASTRO_APROVAR_PREFIX,
   CADASTRO_BUTTON_ID,
   CADASTRO_MODAL_ID,
+  CADASTRO_RECUSAR_PREFIX,
   LAVAGEM_APROVAR_PREFIX,
   LAVAGEM_MODAL_PREFIX,
   LAVAGEM_RECUSAR_PREFIX,
@@ -433,7 +435,7 @@ async function processarModal(interaction, context) {
   } = context;
 
   if (interaction.customId === CADASTRO_MODAL_ID) {
-    return processarCadastro(interaction);
+    return processarCadastro(interaction, client);
   }
 
   if (interaction.customId === `${LAVAGEM_MODAL_PREFIX}parceria`) {
@@ -490,6 +492,7 @@ async function processarModal(interaction, context) {
 
 async function processarBotao(interaction, context) {
   const {
+    aprovarOuRecusarCadastro,
     client,
     formatarMoeda,
     buscarAcaoPorId,
@@ -514,6 +517,16 @@ async function processarBotao(interaction, context) {
 
   if (interaction.customId === CADASTRO_BUTTON_ID) {
     return interaction.showModal(criarModalCadastro());
+  }
+
+  if (interaction.customId.startsWith(CADASTRO_APROVAR_PREFIX)) {
+    const solicitacaoId = Number(interaction.customId.slice(CADASTRO_APROVAR_PREFIX.length));
+    return aprovarOuRecusarCadastro(interaction, solicitacaoId, 'aprovar');
+  }
+
+  if (interaction.customId.startsWith(CADASTRO_RECUSAR_PREFIX)) {
+    const solicitacaoId = Number(interaction.customId.slice(CADASTRO_RECUSAR_PREFIX.length));
+    return aprovarOuRecusarCadastro(interaction, solicitacaoId, 'recusar');
   }
 
   if (interaction.customId === 'acao_pequena') {
