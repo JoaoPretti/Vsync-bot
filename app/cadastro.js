@@ -21,15 +21,16 @@ const {
   CADASTRO_MODAL_ID,
   CADASTRO_RECUSAR_PREFIX,
   CADASTRO_THUMBNAIL_URL,
+  CANAL_LOG_CADASTRO_ID,
 } = require('../config/constants');
 const {
   aprovarSolicitacaoCadastro,
   atualizarMensagemAprovacaoCadastro,
   buscarCadastroPorPersonagemId,
   buscarCadastroPorUsuario,
-  buscarSolicitacaoCadastroPorId,
   buscarSolicitacaoCadastroPendentePorPersonagemId,
   buscarSolicitacaoCadastroPendentePorUsuario,
+  buscarSolicitacaoCadastroPorId,
   recusarSolicitacaoCadastro,
   salvarOuAtualizarCadastro,
   salvarSolicitacaoCadastro,
@@ -196,6 +197,107 @@ function montarPayloadSolicitacaoCadastro(solicitacao, desabilitado = false, des
     flags: MessageFlags.IsComponentsV2,
     components: [criarContainerSolicitacaoCadastro(solicitacao, desabilitado, descricao)],
   };
+}
+
+function montarPayloadLogCadastro({
+  usuarioId,
+  nomeFormatado,
+  personagemId,
+  canalId,
+  canalNome,
+  aprovadoPorId,
+  aprovadoPorNome,
+  aprovadoPorTag,
+  cargoId,
+  criadoEm,
+}) {
+  const cargoTexto = cargoId ? `<@&${cargoId}>` : 'Não informado';
+  const statusTexto = aprovadoPorTag
+    ? `✅ Aprovada por <@${aprovadoPorId}> | ${aprovadoPorTag}`
+    : `✅ Aprovada por <@${aprovadoPorId}>`;
+
+  const container = new ContainerBuilder()
+    .setAccentColor(0x57f287)
+    .addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(
+            ['## Formulário de Ingresso', `Cadastro aprovado para ${nomeFormatado}.`].join('\n')
+          )
+        )
+        .setThumbnailAccessory(
+          new ThumbnailBuilder().setURL(CADASTRO_THUMBNAIL_URL).setDescription('VSYNC')
+        )
+    )
+    .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        [
+          `**Nome:** ${nomeFormatado}`,
+          '',
+          `**ID Cidade:** ${personagemId}`,
+          '',
+          `**Usuário:** <@${usuarioId}> | ${personagemId}`,
+          '',
+          `**ID de Discord:** ${usuarioId}`,
+          '',
+          `**Recrutado por:** ${aprovadoPorNome}`,
+          '',
+          '**Cargo:**',
+          cargoTexto,
+          '',
+          '**Status:**',
+          statusTexto,
+          '',
+          '**Sala Criada**',
+          `Sala # 🗂・${canalNome}・${personagemId} criada`,
+          `Canal: <#${canalId}>`,
+          '',
+          `**Data e Hora:** ${formatarDataHoraBr(criadoEm)}`,
+        ].join('\n')
+      )
+    );
+
+  return {
+    embeds: [],
+    flags: MessageFlags.IsComponentsV2,
+    components: [container],
+  };
+}
+
+async function enviarLogCadastroAprovado({
+  client,
+  usuarioId,
+  nomeFormatado,
+  personagemId,
+  canalId,
+  canalNome,
+  aprovadoPorId,
+  aprovadoPorNome,
+  aprovadoPorTag,
+  cargoId,
+  criadoEm,
+}) {
+  const canalLog = await client.channels.fetch(CANAL_LOG_CADASTRO_ID).catch(() => null);
+
+  if (!canalLog || canalLog.type !== ChannelType.GuildText) {
+    throw new Error('Canal de log de cadastro não encontrado ou inválido.');
+  }
+
+  await canalLog.send(
+    montarPayloadLogCadastro({
+      usuarioId,
+      nomeFormatado,
+      personagemId,
+      canalId,
+      canalNome,
+      aprovadoPorId,
+      aprovadoPorNome,
+      aprovadoPorTag,
+      cargoId,
+      criadoEm,
+    })
+  );
 }
 
 async function criarOuAtualizarCanalCadastro(guild, membro, nomeFormatado, personagemId) {
@@ -546,6 +648,20 @@ async function aprovarOuRecusarCadastro(interaction, solicitacaoId, acao) {
       resultadoCadastro.personagemId
     );
 
+    await enviarLogCadastroAprovado({
+      client: interaction.client,
+      usuarioId: solicitacaoAprovada.discord_user_id,
+      nomeFormatado: resultadoCadastro.nomeFormatado,
+      personagemId: resultadoCadastro.personagemId,
+      canalId: resultadoCadastro.canal.id,
+      canalNome: resultadoCadastro.canal.name,
+      aprovadoPorId: interaction.user.id,
+      aprovadoPorNome: interaction.member?.displayName || interaction.user.username,
+      aprovadoPorTag: interaction.user.tag,
+      cargoId: process.env.CARGO_CADASTRADO_ID || '',
+      criadoEm: new Date(),
+    });
+
     return interaction.editReply({
       content: `Cadastro aprovado com sucesso. Canal criado em <#${resultadoCadastro.canal.id}>.`,
     });
@@ -578,6 +694,7 @@ module.exports = {
   criarModalCadastro,
   criarOuAtualizarCanalCadastro,
   criarPainelCadastro,
+  enviarLogCadastroAprovado,
   enviarMensagemCanalCadastro,
   montarPayloadSolicitacaoCadastro,
   processarCadastro,
