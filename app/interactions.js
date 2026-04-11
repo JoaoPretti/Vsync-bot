@@ -19,6 +19,9 @@ const {
   ACAO_SELECT_RESULTADO_PREFIX,
   ADMIN_BANCO_ADICIONAR_BUTTON_ID,
   ADMIN_BANCO_ADICIONAR_MODAL_ID,
+  ADMIN_BANCO_RESETAR_BUTTON_ID,
+  ADMIN_BANCO_RESETAR_CANCELAR_BUTTON_ID,
+  ADMIN_BANCO_RESETAR_CONFIRMAR_BUTTON_ID,
   ADMIN_BANCO_RETIRAR_BUTTON_ID,
   ADMIN_BANCO_RETIRAR_MODAL_ID,
   ADMIN_PARCERIA_CADASTRAR_BUTTON_ID,
@@ -132,13 +135,15 @@ async function registrarMovimentacaoBanco(interaction, tipo, context) {
   const {
     buscarSaldoBanco,
     enviarLogRegistroBancario,
+    formatarMoeda,
     publicarOuAtualizarPainelAdministrativo,
     salvarRegistroBancario,
   } = context;
   const quantidadeTexto = interaction.fields.getTextInputValue('quantidade').trim();
   const motivo = interaction.fields.getTextInputValue('motivo').trim();
+  const quantidade = Number(quantidadeTexto);
 
-  if (!/^\d+$/.test(quantidadeTexto) || Number(quantidadeTexto) <= 0) {
+  if (!/^\d+$/.test(quantidadeTexto) || quantidade <= 0) {
     return interaction.reply({
       content: 'A quantidade deve ser um numero inteiro maior que zero.',
       flags: MessageFlags.Ephemeral,
@@ -152,13 +157,24 @@ async function registrarMovimentacaoBanco(interaction, tipo, context) {
     });
   }
 
+  if (tipo === 'retirada') {
+    const saldoAtual = await buscarSaldoBanco();
+
+    if (quantidade > saldoAtual) {
+      return interaction.reply({
+        content: `Nao e possivel retirar esse valor porque o saldo atual e ${formatarMoeda(saldoAtual)}.`,
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+  }
+
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const criadoEm = new Date();
 
   const registro = await salvarRegistroBancario({
     tipo,
-    quantidade: Number(quantidadeTexto),
+    quantidade,
     motivo,
     usuarioId: interaction.user.id,
     usuarioTag: interaction.user.tag,
@@ -726,6 +742,7 @@ async function processarModal(interaction, context) {
     return registrarMovimentacaoBanco(interaction, 'adicao', {
       buscarSaldoBanco,
       enviarLogRegistroBancario,
+      formatarMoeda,
       publicarOuAtualizarPainelAdministrativo,
       salvarRegistroBancario,
     });
@@ -742,6 +759,7 @@ async function processarModal(interaction, context) {
     return registrarMovimentacaoBanco(interaction, 'retirada', {
       buscarSaldoBanco,
       enviarLogRegistroBancario,
+      formatarMoeda,
       publicarOuAtualizarPainelAdministrativo,
       salvarRegistroBancario,
     });
@@ -816,6 +834,7 @@ async function processarModal(interaction, context) {
 async function processarBotao(interaction, context) {
   const {
     aprovarOuRecusarCadastro,
+    buscarSaldoBanco,
     client,
     criarModalBancoAdicionar,
     criarModalBancoRetirar,
@@ -828,9 +847,11 @@ async function processarBotao(interaction, context) {
     criarModalLavagem,
     criarModalRemoverParceria,
     criarRascunhoAcao,
+    enviarLogResetBanco,
     finalizarAcao,
     finalizarLavagem,
     listarGruposParceiros,
+    montarPayloadConfirmacaoResetBanco,
     montarPayloadSelecaoGrupoParceiro,
     montarPayloadRascunhoAcao,
     montarPayloadRascunhoConcluido,
@@ -838,7 +859,9 @@ async function processarBotao(interaction, context) {
     removerParticipanteAcao,
     removerRascunhoAcao,
     renderizarMensagemAcao,
+    publicarOuAtualizarPainelAdministrativo,
     rascunhoAcaoEstaPronto,
+    resetarSaldoBanco,
     salvarAcao,
     atualizarCampoAcao,
     adicionarParticipanteAcao,
@@ -868,6 +891,79 @@ async function processarBotao(interaction, context) {
     }
 
     return interaction.showModal(criarModalBancoRetirar());
+  }
+
+  if (interaction.customId === ADMIN_BANCO_RESETAR_BUTTON_ID) {
+    if (!usuarioPodeGerenciarPainelAdministrativo(interaction)) {
+      return interaction.reply({
+        content: 'Você não tem permissão para resetar o saldo do banco.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    const saldoAtual = await buscarSaldoBanco();
+
+    if (saldoAtual <= 0) {
+      return interaction.reply({
+        content: 'O saldo do registro bancário já está zerado.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    return interaction.reply(montarPayloadConfirmacaoResetBanco(formatarMoeda(saldoAtual)));
+  }
+
+  if (interaction.customId === ADMIN_BANCO_RESETAR_CANCELAR_BUTTON_ID) {
+    return interaction.update({
+      content: 'Reset do saldo cancelado.',
+      components: [],
+      embeds: [],
+    });
+  }
+
+  if (interaction.customId === ADMIN_BANCO_RESETAR_CONFIRMAR_BUTTON_ID) {
+    if (!usuarioPodeGerenciarPainelAdministrativo(interaction)) {
+      return interaction.reply({
+        content: 'Você não tem permissão para resetar o saldo do banco.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    const saldoAnterior = await buscarSaldoBanco();
+
+    if (saldoAnterior <= 0) {
+      return interaction.update({
+        content: 'O saldo do registro bancário já estava zerado.',
+        components: [],
+        embeds: [],
+      });
+    }
+
+    await resetarSaldoBanco();
+
+    await enviarLogResetBanco({
+      criadoEm: new Date().toLocaleString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }),
+      saldoAnterior,
+      usuarioId: interaction.user.id,
+    });
+
+    if (interaction.channel) {
+      await publicarOuAtualizarPainelAdministrativo(interaction.channel).catch(() => null);
+    }
+
+    return interaction.update({
+      content: 'Saldo do registro bancário resetado com sucesso.',
+      components: [],
+      embeds: [],
+    });
   }
 
   if (interaction.customId === ADMIN_PARCERIA_CADASTRAR_BUTTON_ID) {

@@ -724,6 +724,12 @@ async function buscarSaldoBanco() {
   return Number(result.rows[0]?.saldo || 0);
 }
 
+async function resetarSaldoBanco() {
+  await db.query(`
+    DELETE FROM registros_bancarios
+  `);
+}
+
 async function atualizarMensagemAprovacaoLavagem(lavagemId, mensagemId, canalId) {
   await db.query(
     `
@@ -826,6 +832,7 @@ module.exports = {
   removerGrupoParceiro,
   removerParticipanteAcao,
   resetarFarmUsuario,
+  resetarSaldoBanco,
   salvarAcao,
   salvarGrupoParceiro,
   salvarRegistroBancario,

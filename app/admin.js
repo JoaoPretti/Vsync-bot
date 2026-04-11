@@ -16,6 +16,9 @@ const {
 const {
   ADMIN_BANCO_ADICIONAR_BUTTON_ID,
   ADMIN_BANCO_ADICIONAR_MODAL_ID,
+  ADMIN_BANCO_RESETAR_BUTTON_ID,
+  ADMIN_BANCO_RESETAR_CANCELAR_BUTTON_ID,
+  ADMIN_BANCO_RESETAR_CONFIRMAR_BUTTON_ID,
   ADMIN_BANCO_RETIRAR_BUTTON_ID,
   ADMIN_BANCO_RETIRAR_MODAL_ID,
   ADMIN_PARCERIA_CADASTRAR_BUTTON_ID,
@@ -26,11 +29,11 @@ const {
   CADASTRO_THUMBNAIL_URL,
 } = require('../config/constants');
 
-function criarBotao(customId, label, emoji, disabled = false) {
+function criarBotao(customId, label, emoji, disabled = false, style = ButtonStyle.Secondary) {
   return new ButtonBuilder()
     .setCustomId(customId)
     .setLabel(label)
-    .setStyle(ButtonStyle.Secondary)
+    .setStyle(style)
     .setEmoji(emoji)
     .setDisabled(disabled);
 }
@@ -121,7 +124,8 @@ function criarPainelAdministrativo(saldoBanco = null) {
     .addActionRowComponents(
       new ActionRowBuilder().addComponents(
         criarBotao(ADMIN_BANCO_ADICIONAR_BUTTON_ID, 'Valor Adicionado', '💰'),
-        criarBotao(ADMIN_BANCO_RETIRAR_BUTTON_ID, 'Valor Retirado', '🏧')
+        criarBotao(ADMIN_BANCO_RETIRAR_BUTTON_ID, 'Valor Retirado', '🏧'),
+        criarBotao(ADMIN_BANCO_RESETAR_BUTTON_ID, 'Resetar Saldo', '⚠️', false, ButtonStyle.Danger)
       )
     );
 
@@ -216,11 +220,94 @@ function montarPayloadLogRegistroBancario({
   };
 }
 
+function montarPayloadConfirmacaoResetBanco(saldoAtual) {
+  const container = new ContainerBuilder()
+    .setAccentColor(0xed4245)
+    .addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents(
+          criarTexto(
+            [
+              '## Confirmar reset do saldo',
+              'Essa acao vai zerar todo o saldo do registro bancario.',
+            ].join('\n')
+          )
+        )
+        .setThumbnailAccessory(criarThumbnail())
+    )
+    .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
+    .addTextDisplayComponents(
+      criarTexto(
+        [
+          `**Saldo atual:** ${saldoAtual}`,
+          '**Atencao:** essa acao nao pode ser desfeita automaticamente.',
+          'Confirme abaixo somente se voce realmente quiser zerar o saldo.',
+        ].join('\n')
+      )
+    )
+    .addActionRowComponents(
+      new ActionRowBuilder().addComponents(
+        criarBotao(
+          ADMIN_BANCO_RESETAR_CONFIRMAR_BUTTON_ID,
+          'Confirmar Reset',
+          '✅',
+          false,
+          ButtonStyle.Danger
+        ),
+        criarBotao(
+          ADMIN_BANCO_RESETAR_CANCELAR_BUTTON_ID,
+          'Cancelar',
+          '❌',
+          false,
+          ButtonStyle.Secondary
+        )
+      )
+    );
+
+  return {
+    embeds: [],
+    flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+    components: [container],
+  };
+}
+
+function montarPayloadLogResetBanco({ criadoEm, saldoAnterior, usuarioId }) {
+  const container = new ContainerBuilder()
+    .setAccentColor(0xed4245)
+    .addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents(
+          criarTexto(['## Registro bancario', 'Saldo bancario resetado com sucesso.'].join('\n'))
+        )
+        .setThumbnailAccessory(criarThumbnail())
+    )
+    .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
+    .addTextDisplayComponents(
+      criarTexto(
+        [
+          'O saldo do registro bancario foi zerado manualmente.',
+          '',
+          `**Saldo anterior:** ${saldoAnterior}`,
+          `**Data:** ${criadoEm}`,
+          `**Registrado por:** <@${usuarioId}>`,
+        ].join('\n')
+      )
+    );
+
+  return {
+    embeds: [],
+    flags: MessageFlags.IsComponentsV2,
+    components: [container],
+  };
+}
+
 module.exports = {
   criarModalBancoAdicionar,
   criarModalBancoRetirar,
   criarModalCadastrarParceria,
   criarModalRemoverParceria,
   criarPainelAdministrativo,
+  montarPayloadConfirmacaoResetBanco,
   montarPayloadLogRegistroBancario,
+  montarPayloadLogResetBanco,
 };

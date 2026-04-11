@@ -50,7 +50,9 @@ const {
   criarModalCadastrarParceria,
   criarModalRemoverParceria,
   criarPainelAdministrativo,
+  montarPayloadConfirmacaoResetBanco,
   montarPayloadLogRegistroBancario,
+  montarPayloadLogResetBanco,
 } = require('./app/admin');
 const { processarInteracao } = require('./app/interactions');
 const {
@@ -64,6 +66,9 @@ const {
 const {
   ADMIN_BANCO_ADICIONAR_BUTTON_ID,
   ADMIN_BANCO_ADICIONAR_MODAL_ID,
+  ADMIN_BANCO_RESETAR_BUTTON_ID,
+  ADMIN_BANCO_RESETAR_CANCELAR_BUTTON_ID,
+  ADMIN_BANCO_RESETAR_CONFIRMAR_BUTTON_ID,
   ADMIN_BANCO_RETIRAR_BUTTON_ID,
   ADMIN_BANCO_RETIRAR_MODAL_ID,
   ADMIN_PARCERIA_CADASTRAR_BUTTON_ID,
@@ -166,6 +171,10 @@ async function salvarGrupoParceiro(dados) {
 
 async function salvarRegistroBancario(dados) {
   return repositories.salvarRegistroBancario(dados);
+}
+
+async function resetarSaldoBanco() {
+  return repositories.resetarSaldoBanco();
 }
 
 async function removerGrupoParceiro(grupoId) {
@@ -411,6 +420,7 @@ async function publicarOuAtualizarPainelAdministrativo(canal) {
       message.author.id === client.user.id &&
       mensagemPossuiAlgumCustomId(message, [
         ADMIN_BANCO_ADICIONAR_BUTTON_ID,
+        ADMIN_BANCO_RESETAR_BUTTON_ID,
         ADMIN_BANCO_RETIRAR_BUTTON_ID,
         ADMIN_PARCERIA_CADASTRAR_BUTTON_ID,
         ADMIN_PARCERIA_LISTAR_BUTTON_ID,
@@ -444,6 +454,21 @@ async function enviarLogRegistroBancario(dados) {
       ...dados,
       saldoAtual: formatarMoeda(dados.saldoAtual),
       quantidade: formatarMoeda(dados.quantidade),
+    })
+  );
+}
+
+async function enviarLogResetBanco(dados) {
+  const canalLog = await client.channels.fetch(CANAL_LOG_BANCO_ID).catch(() => null);
+
+  if (!canalLog || canalLog.type !== ChannelType.GuildText) {
+    throw new Error('Canal de log bancario nao encontrado ou invalido.');
+  }
+
+  await canalLog.send(
+    montarPayloadLogResetBanco({
+      ...dados,
+      saldoAnterior: formatarMoeda(dados.saldoAnterior),
     })
   );
 }
@@ -745,6 +770,9 @@ client.on('interactionCreate', async (interaction) =>
     ACAO_RASCUNHO_TIPO_PREFIX,
     ADMIN_BANCO_ADICIONAR_BUTTON_ID,
     ADMIN_BANCO_ADICIONAR_MODAL_ID,
+    ADMIN_BANCO_RESETAR_BUTTON_ID,
+    ADMIN_BANCO_RESETAR_CANCELAR_BUTTON_ID,
+    ADMIN_BANCO_RESETAR_CONFIRMAR_BUTTON_ID,
     ADMIN_BANCO_RETIRAR_BUTTON_ID,
     ADMIN_BANCO_RETIRAR_MODAL_ID,
     adicionarParticipanteAcao,
@@ -771,12 +799,14 @@ client.on('interactionCreate', async (interaction) =>
     criarPainel,
     criarPainelCadastro,
     criarRascunhoAcao,
+    enviarLogResetBanco,
     enviarLogRegistroBancario,
     finalizarAcao,
     finalizarLavagem,
     formatarMoeda,
     LAVAGEM_PARCEIRO_SELECT_ID,
     listarGruposParceiros,
+    montarPayloadConfirmacaoResetBanco,
     montarPayloadSelecaoGrupoParceiro,
     montarPayloadRascunhoAcao,
     montarPayloadRascunhoConcluido,
@@ -793,6 +823,7 @@ client.on('interactionCreate', async (interaction) =>
     removerParticipanteAcao,
     removerRascunhoAcao,
     renderizarMensagemAcao,
+    resetarSaldoBanco,
     resolverUrlImagem,
     salvarAcao,
     salvarGrupoParceiro,
