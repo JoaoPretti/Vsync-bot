@@ -22,7 +22,7 @@ function sanitizarNomeCanal(nome) {
 }
 
 function gerarNomeCanalCadastro(nomeFormatado, personagemId) {
-  return `${sanitizarNomeCanal(nomeFormatado)}-${personagemId}`.slice(0, 100);
+  return `🗂️・${sanitizarNomeCanal(nomeFormatado)}・${personagemId}`.slice(0, 100);
 }
 
 function formatarMoeda(valor) {
