@@ -8,6 +8,7 @@ const {
   ModalBuilder,
   SectionBuilder,
   SeparatorBuilder,
+  StringSelectMenuBuilder,
   TextDisplayBuilder,
   TextInputBuilder,
   TextInputStyle,
@@ -30,6 +31,8 @@ const {
   salvarLavagem,
 } = require('../repositories');
 const { formatarMoeda, normalizarEspacos } = require('../utils');
+
+const LAVAGEM_PARCEIRO_SELECT_ID = 'lavagem_parceiro_select';
 
 function obterConfigLavagem(tipo) {
   if (tipo === 'parceria') {
@@ -99,11 +102,71 @@ function gerarNotaFiscalLavagem(data) {
   return `${partes.year}${partes.month}${partes.day}${partes.hour}${partes.minute}${partes.second}`;
 }
 
-function criarModalLavagem(tipo) {
+function normalizarNomeGrupoParceiro(nome) {
+  return normalizarEspacos(nome)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function criarThumbnailLavagem() {
+  return new ThumbnailBuilder().setURL(CADASTRO_THUMBNAIL_URL).setDescription('VSYNC');
+}
+
+function montarPayloadSelecaoGrupoParceiro(grupos) {
+  const select = new StringSelectMenuBuilder()
+    .setCustomId(LAVAGEM_PARCEIRO_SELECT_ID)
+    .setPlaceholder('Selecione o grupo parceiro')
+    .addOptions(
+      grupos.map((grupo) => ({
+        label: grupo.nome.slice(0, 100),
+        value: String(grupo.id),
+        description: `Usar ${grupo.nome.slice(0, 70)} na lavagem de parceria`,
+      }))
+    );
+
+  const container = new ContainerBuilder()
+    .setAccentColor(0x2f3136)
+    .addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(
+            ['## Central de lavagem', 'Escolha abaixo qual grupo parceiro sera usado.'].join(
+              '\n'
+            )
+          )
+        )
+        .setThumbnailAccessory(criarThumbnailLavagem())
+    )
+    .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        [
+          '**Grupos disponiveis**',
+          'A lista abaixo mostra apenas os grupos parceiros cadastrados pela administracao.',
+        ].join('\n')
+      )
+    )
+    .addActionRowComponents(new ActionRowBuilder().addComponents(select));
+
+  return {
+    embeds: [],
+    flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+    components: [container],
+  };
+}
+
+function criarModalLavagem(tipo, grupoParceiro = null) {
   const config = obterConfigLavagem(tipo);
   const modal = new ModalBuilder()
-    .setCustomId(`${LAVAGEM_MODAL_PREFIX}${config.tipo}`)
-    .setTitle(config.titulo);
+    .setCustomId(
+      grupoParceiro
+        ? `${LAVAGEM_MODAL_PREFIX}${config.tipo}_${grupoParceiro.id}`
+        : `${LAVAGEM_MODAL_PREFIX}${config.tipo}`
+    )
+    .setTitle(
+      grupoParceiro ? `${config.titulo} - ${grupoParceiro.nome.slice(0, 35)}` : config.titulo
+    );
 
   const quantidadeInput = new TextInputBuilder()
     .setCustomId('quantidade')
@@ -113,27 +176,30 @@ function criarModalLavagem(tipo) {
     .setPlaceholder('Ex.: 1000000')
     .setMaxLength(12);
 
-  const grupoInput = new TextInputBuilder()
-    .setCustomId('grupo')
-    .setLabel('Grupo')
-    .setStyle(TextInputStyle.Short)
-    .setRequired(true)
-    .setPlaceholder('Ex.: Grupo Norte')
-    .setMaxLength(60);
-
   const personagemIdInput = new TextInputBuilder()
     .setCustomId('personagem_id')
-    .setLabel('ID do personagem que está lavando')
+    .setLabel('ID do personagem que esta lavando')
     .setStyle(TextInputStyle.Short)
     .setRequired(true)
     .setPlaceholder('Ex.: 6001')
     .setMaxLength(10);
 
-  modal.addComponents(
-    new ActionRowBuilder().addComponents(quantidadeInput),
-    new ActionRowBuilder().addComponents(grupoInput),
-    new ActionRowBuilder().addComponents(personagemIdInput)
-  );
+  const componentes = [new ActionRowBuilder().addComponents(quantidadeInput)];
+
+  if (!grupoParceiro) {
+    const grupoInput = new TextInputBuilder()
+      .setCustomId('grupo')
+      .setLabel('Grupo')
+      .setStyle(TextInputStyle.Short)
+      .setRequired(true)
+      .setPlaceholder('Ex.: Grupo Norte')
+      .setMaxLength(60);
+
+    componentes.push(new ActionRowBuilder().addComponents(grupoInput));
+  }
+
+  componentes.push(new ActionRowBuilder().addComponents(personagemIdInput));
+  modal.addComponents(...componentes);
 
   return modal;
 }
@@ -143,20 +209,16 @@ function criarBotoesAprovacaoLavagem(lavagemId, desabilitado = false) {
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`${LAVAGEM_APROVAR_PREFIX}${lavagemId}`)
-        .setLabel('Aprovar solicitação')
+        .setLabel('Aprovar solicitacao')
         .setStyle(ButtonStyle.Success)
         .setDisabled(desabilitado),
       new ButtonBuilder()
         .setCustomId(`${LAVAGEM_RECUSAR_PREFIX}${lavagemId}`)
-        .setLabel('Recusar solicitação')
+        .setLabel('Recusar solicitacao')
         .setStyle(ButtonStyle.Danger)
         .setDisabled(desabilitado)
     ),
   ];
-}
-
-function criarThumbnailLavagem() {
-  return new ThumbnailBuilder().setURL(CADASTRO_THUMBNAIL_URL).setDescription('VSYNC');
 }
 
 function criarContainerAprovacaoLavagem(lavagem, desabilitado = false, descricao = null) {
@@ -176,7 +238,7 @@ function criarContainerAprovacaoLavagem(lavagem, desabilitado = false, descricao
           new TextDisplayBuilder().setContent(
             [
               '## Central de lavagem',
-              descricao || `Revise a solicitação de ${config.titulo.toLowerCase()} nesta central.`,
+              descricao || `Revise a solicitacao de ${config.titulo.toLowerCase()} nesta central.`,
             ].join('\n')
           )
         )
@@ -190,9 +252,9 @@ function criarContainerAprovacaoLavagem(lavagem, desabilitado = false, descricao
           `**Grupo:** ${lavagem.grupo}`,
           `**Valor Total:** ${formatarMoeda(lavagem.quantidade)}`,
           `**Valor do Cliente:** ${formatarMoeda(lavagem.valor_cliente)}`,
-          `**Valor da Facção:** ${formatarMoeda(lavagem.valor_faccao)}`,
+          `**Valor da Faccao:** ${formatarMoeda(lavagem.valor_faccao)}`,
           `**Taxa:** ${lavagem.taxa_percentual}%`,
-          `**Usuário:** <@${lavagem.usuario_id}>`,
+          `**Usuario:** <@${lavagem.usuario_id}>`,
           `**Passaporte:** ${lavagem.personagem_id}`,
           `**Status:** ${statusTexto}`,
         ].join('\n')
@@ -222,10 +284,9 @@ function criarContainerRegistroLavagem(lavagem) {
       new SectionBuilder()
         .addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            [
-              '## Central de lavagem',
-              `✅ Lavagem Confirmada - ${subtitulo} | NF ${notaFiscal}`,
-            ].join('\n')
+            ['## Central de lavagem', `Lavagem Confirmada - ${subtitulo} | NF ${notaFiscal}`].join(
+              '\n'
+            )
           )
         )
         .setThumbnailAccessory(criarThumbnailLavagem())
@@ -234,15 +295,15 @@ function criarContainerRegistroLavagem(lavagem) {
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         [
-          `• Lavagem — ${formatarMoeda(lavagem.quantidade)}`,
-          `• Taxa de Lavagem: ${lavagem.taxa_percentual}%`,
+          `Lavagem - ${formatarMoeda(lavagem.quantidade)}`,
+          `Taxa de Lavagem: ${lavagem.taxa_percentual}%`,
           '',
-          `Valor para facção — ${formatarMoeda(lavagem.valor_faccao)}`,
+          `Valor para faccao - ${formatarMoeda(lavagem.valor_faccao)}`,
           '```',
           `${Number(lavagem.valor_faccao || 0)}`,
           '```',
           '',
-          `Valor do cliente — ${formatarMoeda(lavagem.valor_cliente)}`,
+          `Valor do cliente - ${formatarMoeda(lavagem.valor_cliente)}`,
           '```',
           `${Number(lavagem.valor_cliente || 0)}`,
           '```',
@@ -259,8 +320,8 @@ function criarContainerRegistroLavagem(lavagem) {
           `**Status:**`,
           `${
             lavagem.aprovado_por_id
-              ? `✅ Confirmado por <@${lavagem.aprovado_por_id}>`
-              : '✅ Confirmado'
+              ? `Confirmado por <@${lavagem.aprovado_por_id}>`
+              : 'Confirmado'
           }`,
         ].join('\n')
       )
@@ -275,29 +336,31 @@ function montarPayloadRegistroLavagem(lavagem) {
   };
 }
 
-async function processarModalLavagem(interaction, tipo, client) {
+async function processarModalLavagem(interaction, tipo, client, grupoParceiro = null) {
   const config = obterConfigLavagem(tipo);
   const quantidadeTexto = interaction.fields.getTextInputValue('quantidade').trim();
-  const grupo = normalizarEspacos(interaction.fields.getTextInputValue('grupo'));
+  const grupo = grupoParceiro?.nome
+    ? grupoParceiro.nome
+    : normalizarEspacos(interaction.fields.getTextInputValue('grupo'));
   const personagemId = interaction.fields.getTextInputValue('personagem_id').trim();
 
   if (!/^\d+$/.test(quantidadeTexto)) {
     return interaction.reply({
-      content: 'A quantidade para lavar deve conter apenas números inteiros.',
+      content: 'A quantidade para lavar deve conter apenas numeros inteiros.',
       ephemeral: true,
     });
   }
 
   if (!/^\d+$/.test(personagemId)) {
     return interaction.reply({
-      content: 'O ID do personagem deve conter apenas números.',
+      content: 'O ID do personagem deve conter apenas numeros.',
       ephemeral: true,
     });
   }
 
   if (!grupo || grupo.length < 2) {
     return interaction.reply({
-      content: 'Informe um grupo válido.',
+      content: 'Informe um grupo valido.',
       ephemeral: true,
     });
   }
@@ -332,7 +395,7 @@ async function processarModalLavagem(interaction, tipo, client) {
   const canalAprovacao = await client.channels.fetch(CANAL_APROVACAO_LAVAGEM_ID).catch(() => null);
 
   if (!canalAprovacao || canalAprovacao.type !== ChannelType.GuildText) {
-    throw new Error('Canal de aprovação de lavagem não encontrado ou inválido.');
+    throw new Error('Canal de aprovacao de lavagem nao encontrado ou invalido.');
   }
 
   const mensagemAprovacao = await canalAprovacao.send(montarPayloadAprovacaoLavagem(lavagem));
@@ -340,7 +403,7 @@ async function processarModalLavagem(interaction, tipo, client) {
   await atualizarMensagemAprovacaoLavagem(lavagem.id, mensagemAprovacao.id, canalAprovacao.id);
 
   return interaction.editReply({
-    content: `${config.titulo} enviada para aprovação com sucesso.`,
+    content: `${config.titulo} enviada para aprovacao com sucesso.`,
   });
 }
 
@@ -349,14 +412,14 @@ async function finalizarLavagem(interaction, lavagemId, acao, client) {
 
   if (!lavagem) {
     return interaction.reply({
-      content: 'Não encontrei essa solicitação de lavagem.',
+      content: 'Nao encontrei essa solicitacao de lavagem.',
       ephemeral: true,
     });
   }
 
   if (lavagem.status !== 'pendente') {
     return interaction.reply({
-      content: `Essa lavagem já foi ${lavagem.status}.`,
+      content: `Essa lavagem ja foi ${lavagem.status}.`,
       ephemeral: true,
     });
   }
@@ -370,7 +433,7 @@ async function finalizarLavagem(interaction, lavagemId, acao, client) {
 
   if (!lavagemAtualizada) {
     return interaction.editReply({
-      content: 'Essa lavagem já foi processada por outra pessoa.',
+      content: 'Essa lavagem ja foi processada por outra pessoa.',
     });
   }
 
@@ -379,8 +442,8 @@ async function finalizarLavagem(interaction, lavagemId, acao, client) {
       lavagemAtualizada,
       true,
       acao === 'aprovar'
-        ? `Solicitação aprovada por <@${interaction.user.id}>.`
-        : `Solicitação recusada por <@${interaction.user.id}>.`
+        ? `Solicitacao aprovada por <@${interaction.user.id}>.`
+        : `Solicitacao recusada por <@${interaction.user.id}>.`
     )
   );
 
@@ -388,7 +451,7 @@ async function finalizarLavagem(interaction, lavagemId, acao, client) {
     const canalRegistro = await client.channels.fetch(CANAL_REGISTRO_LAVAGEM_ID).catch(() => null);
 
     if (!canalRegistro || canalRegistro.type !== ChannelType.GuildText) {
-      throw new Error('Canal de registro de lavagem não encontrado ou inválido.');
+      throw new Error('Canal de registro de lavagem nao encontrado ou invalido.');
     }
 
     await canalRegistro.send(montarPayloadRegistroLavagem(lavagemAtualizada));
@@ -405,6 +468,9 @@ async function finalizarLavagem(interaction, lavagemId, acao, client) {
 module.exports = {
   criarModalLavagem,
   finalizarLavagem,
+  LAVAGEM_PARCEIRO_SELECT_ID,
   montarPayloadAprovacaoLavagem,
+  montarPayloadSelecaoGrupoParceiro,
+  normalizarNomeGrupoParceiro,
   processarModalLavagem,
 };

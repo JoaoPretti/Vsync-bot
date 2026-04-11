@@ -63,6 +63,27 @@ const commands = [
     ),
 
   new SlashCommandBuilder()
+    .setName('registrar_grupo_parceiro')
+    .setDescription('Cadastra um grupo parceiro para uso em lavagens de parceria')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addStringOption((option) =>
+      option.setName('nome').setDescription('Nome do grupo parceiro').setRequired(true)
+    ),
+
+  new SlashCommandBuilder()
+    .setName('remover_grupo_parceiro')
+    .setDescription('Remove um grupo parceiro cadastrado')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addStringOption((option) =>
+      option.setName('nome').setDescription('Nome do grupo parceiro').setRequired(true)
+    ),
+
+  new SlashCommandBuilder()
+    .setName('listar_grupos_parceiros')
+    .setDescription('Lista os grupos parceiros cadastrados')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+  new SlashCommandBuilder()
     .setName('relatorio_semanal')
     .setDescription('Mostra seus relatórios semanais'),
 

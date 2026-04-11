@@ -28,6 +28,10 @@ const {
   PAINEL_ACOES_CANAL_ID,
 } = require('../config/constants');
 
+function truncarTexto(texto, limite = 1900) {
+  return texto.length <= limite ? texto : `${texto.slice(0, limite - 3)}...`;
+}
+
 function criarPayloadRegistroFarm({ item, quantidade, usuarioId, imagem, imagemEmbed }) {
   const comprovanteUrl = imagemEmbed || imagem;
   const container = new ContainerBuilder()
@@ -189,16 +193,21 @@ function criarPayloadResumoFarm(agrupado, registros, usuarioId) {
 async function processarComando(interaction, context) {
   const {
     client,
-    criarPainel,
-    buscarCadastroPorUsuario,
     aplicarCadastroUsuario,
+    buscarCadastroPorUsuario,
+    buscarGrupoParceiroPorNomeNormalizado,
     buscarRelatoriosUsuario,
     buscarResumoSemanalGlobal,
-    salvarRegistroBanco,
-    processarRelatorioSemanal,
-    resolverUrlImagem,
+    criarPainel,
+    listarGruposParceiros,
+    normalizarNomeGrupoParceiro,
     publicarOuAtualizarPainelAcoes,
     publicarOuAtualizarPainelCadastro,
+    processarRelatorioSemanal,
+    removerGrupoParceiro,
+    resolverUrlImagem,
+    salvarGrupoParceiro,
+    salvarRegistroBanco,
   } = context;
 
   if (interaction.commandName === 'painel_acoes') {
@@ -281,6 +290,99 @@ async function processarComando(interaction, context) {
     return interaction.reply({
       embeds: [painel.embed],
       components: painel.components,
+      ephemeral: true,
+    });
+  }
+
+  if (interaction.commandName === 'registrar_grupo_parceiro') {
+    if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+      return interaction.reply({
+        content: 'Você não tem permissão para cadastrar grupos parceiros.',
+        ephemeral: true,
+      });
+    }
+
+    const nome = interaction.options.getString('nome', true).trim();
+    const nomeNormalizado = normalizarNomeGrupoParceiro(nome);
+
+    if (!nomeNormalizado || nome.length < 2) {
+      return interaction.reply({
+        content: 'Informe um nome de grupo parceiro válido.',
+        ephemeral: true,
+      });
+    }
+
+    const grupoExistente = await buscarGrupoParceiroPorNomeNormalizado(nomeNormalizado);
+
+    if (grupoExistente) {
+      return interaction.reply({
+        content: `O grupo parceiro **${grupoExistente.nome}** já está cadastrado.`,
+        ephemeral: true,
+      });
+    }
+
+    const grupo = await salvarGrupoParceiro({
+      nome,
+      nomeNormalizado,
+      criadoPorId: interaction.user.id,
+      criadoPorTag: interaction.user.tag,
+      criadoEm: new Date(),
+      atualizadoEm: new Date(),
+    });
+
+    return interaction.reply({
+      content: `Grupo parceiro **${grupo.nome}** cadastrado com sucesso.`,
+      ephemeral: true,
+    });
+  }
+
+  if (interaction.commandName === 'remover_grupo_parceiro') {
+    if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+      return interaction.reply({
+        content: 'Você não tem permissão para remover grupos parceiros.',
+        ephemeral: true,
+      });
+    }
+
+    const nome = interaction.options.getString('nome', true).trim();
+    const grupo = await buscarGrupoParceiroPorNomeNormalizado(normalizarNomeGrupoParceiro(nome));
+
+    if (!grupo) {
+      return interaction.reply({
+        content: 'Não encontrei um grupo parceiro com esse nome.',
+        ephemeral: true,
+      });
+    }
+
+    await removerGrupoParceiro(grupo.id);
+
+    return interaction.reply({
+      content: `Grupo parceiro **${grupo.nome}** removido com sucesso.`,
+      ephemeral: true,
+    });
+  }
+
+  if (interaction.commandName === 'listar_grupos_parceiros') {
+    if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+      return interaction.reply({
+        content: 'Você não tem permissão para listar grupos parceiros.',
+        ephemeral: true,
+      });
+    }
+
+    const grupos = await listarGruposParceiros();
+
+    if (!grupos.length) {
+      return interaction.reply({
+        content: 'Nenhum grupo parceiro cadastrado até o momento.',
+        ephemeral: true,
+      });
+    }
+
+    const linhas = grupos.map((grupo) => `- ${grupo.nome}`).join('\n');
+
+    return interaction.reply({
+      content: truncarTexto(`Grupos parceiros cadastrados:\n${linhas}`),
       ephemeral: true,
     });
   }
@@ -426,12 +528,13 @@ async function processarComando(interaction, context) {
 
 async function processarModal(interaction, context) {
   const {
+    buscarGrupoParceiroPorId,
     client,
     formatarMoeda,
-    processarCadastro,
-    processarModalLavagem,
     montarPayloadRascunhoAcao,
     obterRascunhoAcao,
+    processarCadastro,
+    processarModalLavagem,
   } = context;
 
   if (interaction.customId === CADASTRO_MODAL_ID) {
@@ -440,6 +543,20 @@ async function processarModal(interaction, context) {
 
   if (interaction.customId === `${LAVAGEM_MODAL_PREFIX}parceria`) {
     return processarModalLavagem(interaction, 'parceria', client);
+  }
+
+  if (interaction.customId.startsWith(`${LAVAGEM_MODAL_PREFIX}parceria_`)) {
+    const grupoId = Number(interaction.customId.slice(`${LAVAGEM_MODAL_PREFIX}parceria_`.length));
+    const grupoParceiro = await buscarGrupoParceiroPorId(grupoId);
+
+    if (!grupoParceiro) {
+      return interaction.reply({
+        content: 'O grupo parceiro selecionado não está mais disponível.',
+        ephemeral: true,
+      });
+    }
+
+    return processarModalLavagem(interaction, 'parceria', client, grupoParceiro);
   }
 
   if (interaction.customId === `${LAVAGEM_MODAL_PREFIX}pista`) {
@@ -503,6 +620,8 @@ async function processarBotao(interaction, context) {
     criarRascunhoAcao,
     finalizarAcao,
     finalizarLavagem,
+    listarGruposParceiros,
+    montarPayloadSelecaoGrupoParceiro,
     montarPayloadRascunhoAcao,
     montarPayloadRascunhoConcluido,
     obterRascunhoAcao,
@@ -560,7 +679,25 @@ async function processarBotao(interaction, context) {
   }
 
   if (interaction.customId === 'lavagem_parceria') {
-    return interaction.showModal(criarModalLavagem('parceria'));
+    const grupos = await listarGruposParceiros();
+
+    if (!grupos.length) {
+      return interaction.reply({
+        content:
+          'Nenhum grupo parceiro foi cadastrado ainda. Peça para um administrador usar /registrar_grupo_parceiro.',
+        ephemeral: true,
+      });
+    }
+
+    if (grupos.length > 25) {
+      return interaction.reply({
+        content:
+          'Existem mais de 25 grupos parceiros cadastrados. Reduza a lista antes de usar a seleção de parceria.',
+        ephemeral: true,
+      });
+    }
+
+    return interaction.reply(montarPayloadSelecaoGrupoParceiro(grupos));
   }
 
   if (interaction.customId === 'lavagem_pista') {
@@ -718,10 +855,27 @@ async function processarSelect(interaction, context) {
   const {
     formatarMoeda,
     atualizarCampoAcao,
+    buscarGrupoParceiroPorId,
+    criarModalLavagem,
+    LAVAGEM_PARCEIRO_SELECT_ID,
     montarPayloadRascunhoAcao,
     obterRascunhoAcao,
     renderizarMensagemAcao,
   } = context;
+
+  if (interaction.customId === LAVAGEM_PARCEIRO_SELECT_ID) {
+    const grupoId = Number(interaction.values[0]);
+    const grupoParceiro = await buscarGrupoParceiroPorId(grupoId);
+
+    if (!grupoParceiro) {
+      return interaction.reply({
+        content: 'O grupo parceiro selecionado não está mais disponível.',
+        ephemeral: true,
+      });
+    }
+
+    return interaction.showModal(criarModalLavagem('parceria', grupoParceiro));
+  }
 
   if (interaction.customId.startsWith(context.ACAO_RASCUNHO_NOME_PREFIX)) {
     const token = interaction.customId.slice(context.ACAO_RASCUNHO_NOME_PREFIX.length);

@@ -45,7 +45,14 @@ const {
   processarCadastro,
 } = require('./app/cadastro');
 const { processarInteracao } = require('./app/interactions');
-const { criarModalLavagem, finalizarLavagem, processarModalLavagem } = require('./app/lavagem');
+const {
+  criarModalLavagem,
+  finalizarLavagem,
+  LAVAGEM_PARCEIRO_SELECT_ID,
+  montarPayloadSelecaoGrupoParceiro,
+  normalizarNomeGrupoParceiro,
+  processarModalLavagem,
+} = require('./app/lavagem');
 const {
   CANAL_LOG_ACOES_ID,
   CADASTRO_BUTTON_ID,
@@ -114,6 +121,26 @@ async function buscarRelatoriosUsuario(usuarioId) {
 
 async function buscarResumoSemanalGlobal() {
   return repositories.buscarResumoSemanalGlobal();
+}
+
+async function listarGruposParceiros() {
+  return repositories.listarGruposParceiros();
+}
+
+async function buscarGrupoParceiroPorId(grupoId) {
+  return repositories.buscarGrupoParceiroPorId(grupoId);
+}
+
+async function buscarGrupoParceiroPorNomeNormalizado(nomeNormalizado) {
+  return repositories.buscarGrupoParceiroPorNomeNormalizado(nomeNormalizado);
+}
+
+async function salvarGrupoParceiro(dados) {
+  return repositories.salvarGrupoParceiro(dados);
+}
+
+async function removerGrupoParceiro(grupoId) {
+  return repositories.removerGrupoParceiro(grupoId);
 }
 
 async function salvarRegistroBanco(dados) {
@@ -630,6 +657,8 @@ client.on('interactionCreate', async (interaction) =>
     atualizarCampoAcao,
     buscarAcaoPorId,
     buscarCadastroPorUsuario,
+    buscarGrupoParceiroPorId,
+    buscarGrupoParceiroPorNomeNormalizado,
     buscarRegistrosFarmPorUsuario,
     buscarRelatoriosUsuario,
     buscarResumoSemanalGlobal,
@@ -643,8 +672,12 @@ client.on('interactionCreate', async (interaction) =>
     finalizarAcao,
     finalizarLavagem,
     formatarMoeda,
+    LAVAGEM_PARCEIRO_SELECT_ID,
+    listarGruposParceiros,
+    montarPayloadSelecaoGrupoParceiro,
     montarPayloadRascunhoAcao,
     montarPayloadRascunhoConcluido,
+    normalizarNomeGrupoParceiro,
     obterRascunhoAcao,
     processarCadastro,
     processarModalLavagem,
@@ -652,11 +685,13 @@ client.on('interactionCreate', async (interaction) =>
     publicarOuAtualizarPainelAcoes,
     publicarOuAtualizarPainelCadastro,
     rascunhoAcaoEstaPronto,
+    removerGrupoParceiro,
     removerParticipanteAcao,
     removerRascunhoAcao,
     renderizarMensagemAcao,
     resolverUrlImagem,
     salvarAcao,
+    salvarGrupoParceiro,
     salvarRegistroBanco,
   })
 );

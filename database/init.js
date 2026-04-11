@@ -138,6 +138,19 @@ async function initDatabase() {
     )
   `);
 
+  console.log('INIT 4.05 - criando tabela grupos_parceiros');
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS grupos_parceiros (
+      id SERIAL PRIMARY KEY,
+      nome TEXT NOT NULL,
+      nome_normalizado TEXT NOT NULL,
+      criado_por_id TEXT NOT NULL,
+      criado_por_tag TEXT NOT NULL,
+      criado_em TIMESTAMP NOT NULL,
+      atualizado_em TIMESTAMP NOT NULL
+    )
+  `);
+
   console.log('INIT 4.1 - criando tabela cadastro_solicitacoes');
   await db.query(`
     CREATE TABLE IF NOT EXISTS cadastro_solicitacoes (
@@ -210,6 +223,13 @@ async function initDatabase() {
     `
   );
   await criarIndice(
+    'idx_grupos_parceiros_nome',
+    `
+      CREATE INDEX IF NOT EXISTS idx_grupos_parceiros_nome
+      ON grupos_parceiros (nome)
+    `
+  );
+  await criarIndice(
     'idx_cadastro_solicitacoes_usuario_status',
     `
       CREATE INDEX IF NOT EXISTS idx_cadastro_solicitacoes_usuario_status
@@ -247,6 +267,24 @@ async function initDatabase() {
       ) duplicados
     `,
     aviso: 'existem personagem_id duplicados em cadastros',
+  });
+  await criarIndiceUnicoSePossivel({
+    nome: 'ux_grupos_parceiros_nome_normalizado',
+    createIndexSql: `
+      CREATE UNIQUE INDEX IF NOT EXISTS ux_grupos_parceiros_nome_normalizado
+      ON grupos_parceiros (nome_normalizado)
+    `,
+    validacaoSql: `
+      SELECT COUNT(*) AS total
+      FROM (
+        SELECT nome_normalizado
+        FROM grupos_parceiros
+        WHERE nome_normalizado IS NOT NULL
+        GROUP BY nome_normalizado
+        HAVING COUNT(*) > 1
+      ) duplicados
+    `,
+    aviso: 'existem grupos parceiros duplicados',
   });
   await criarCheckConstraintSePossivel({
     nome: 'chk_registros_quantidade_positiva',

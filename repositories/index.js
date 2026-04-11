@@ -573,6 +573,83 @@ async function salvarLavagem(dados) {
   return result.rows[0];
 }
 
+async function listarGruposParceiros() {
+  const result = await db.query(`
+    SELECT *
+    FROM grupos_parceiros
+    ORDER BY nome ASC
+  `);
+
+  return result.rows;
+}
+
+async function buscarGrupoParceiroPorId(grupoId) {
+  const result = await db.query(
+    `
+      SELECT *
+      FROM grupos_parceiros
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [grupoId]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function buscarGrupoParceiroPorNomeNormalizado(nomeNormalizado) {
+  const result = await db.query(
+    `
+      SELECT *
+      FROM grupos_parceiros
+      WHERE nome_normalizado = $1
+      LIMIT 1
+    `,
+    [nomeNormalizado]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function salvarGrupoParceiro(dados) {
+  const result = await db.query(
+    `
+      INSERT INTO grupos_parceiros (
+        nome,
+        nome_normalizado,
+        criado_por_id,
+        criado_por_tag,
+        criado_em,
+        atualizado_em
+      ) VALUES ($1,$2,$3,$4,$5,$6)
+      RETURNING *
+    `,
+    [
+      dados.nome,
+      dados.nomeNormalizado,
+      dados.criadoPorId,
+      dados.criadoPorTag,
+      dados.criadoEm,
+      dados.atualizadoEm,
+    ]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function removerGrupoParceiro(grupoId) {
+  const result = await db.query(
+    `
+      DELETE FROM grupos_parceiros
+      WHERE id = $1
+      RETURNING *
+    `,
+    [grupoId]
+  );
+
+  return result.rows[0] || null;
+}
+
 async function atualizarMensagemAprovacaoLavagem(lavagemId, mensagemId, canalId) {
   await db.query(
     `
@@ -654,6 +731,8 @@ module.exports = {
   buscarAcaoPorId,
   buscarCadastroPorPersonagemId,
   buscarCadastroPorUsuario,
+  buscarGrupoParceiroPorId,
+  buscarGrupoParceiroPorNomeNormalizado,
   buscarLavagemPorId,
   buscarParticipantesAcao,
   buscarRegistrosFarmPorUsuario,
@@ -665,11 +744,14 @@ module.exports = {
   buscarTotalFarmPorUsuario,
   buscarUsuariosComFarm,
   manterUltimos52RelatoriosPorUsuario,
+  listarGruposParceiros,
   recusarSolicitacaoCadastro,
   recusarLavagem,
+  removerGrupoParceiro,
   removerParticipanteAcao,
   resetarFarmUsuario,
   salvarAcao,
+  salvarGrupoParceiro,
   salvarLavagem,
   salvarOuAtualizarCadastro,
   salvarSolicitacaoCadastro,
