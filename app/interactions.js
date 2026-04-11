@@ -173,9 +173,9 @@ function criarPayloadRegistroFarm({ item, quantidade, usuarioId, imagem, imagemE
   };
 }
 
-function criarPayloadRelatorioSemanal(relatorios, usuarioId) {
+function criarPayloadRelatorioSemanal(relatorios, semanaReferencia, totalGeral) {
   const descricao = relatorios
-    .map((relatorio) => `- Semana ${relatorio.semana_referencia}: **${relatorio.total_itens}**`)
+    .map((relatorio) => `- <@${relatorio.usuario_id}>: **${relatorio.total_itens}**`)
     .join('\n');
 
   const container = new ContainerBuilder()
@@ -196,9 +196,12 @@ function criarPayloadRelatorioSemanal(relatorios, usuarioId) {
     .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        ['**Resumo da central**', `**Usuário:** <@${usuarioId}>`, descricao.slice(0, 3800)].join(
-          '\n'
-        )
+        [
+          '**Resumo da central**',
+          `**Semana de referência:** ${semanaReferencia}`,
+          `**Total geral:** ${totalGeral}`,
+          descricao.slice(0, 3600),
+        ].join('\n')
       )
     );
 
@@ -288,7 +291,7 @@ async function processarComando(interaction, context) {
     aplicarCadastroUsuario,
     buscarCadastroPorUsuario,
     buscarGrupoParceiroPorNomeNormalizado,
-    buscarRelatoriosUsuario,
+    buscarRelatorioSemanalGlobalMaisRecente,
     buscarResumoSemanalGlobal,
     criarPainel,
     listarGruposParceiros,
@@ -544,16 +547,20 @@ async function processarComando(interaction, context) {
   }
 
   if (interaction.commandName === 'relatorio_semanal') {
-    const relatorios = await buscarRelatoriosUsuario(interaction.user.id);
+    const { semanaReferencia, relatorios } = await buscarRelatorioSemanalGlobalMaisRecente();
 
     if (!relatorios.length) {
       return interaction.reply({
-        content: 'Você não possui relatórios ainda.',
+        content: 'Nenhum relatório semanal fechado foi encontrado ainda.',
         flags: MessageFlags.Ephemeral,
       });
     }
 
-    return interaction.reply(criarPayloadRelatorioSemanal(relatorios, interaction.user.id));
+    const totalGeral = relatorios.reduce((acc, relatorio) => acc + relatorio.total_itens, 0);
+
+    return interaction.reply(
+      criarPayloadRelatorioSemanal(relatorios, semanaReferencia, totalGeral)
+    );
   }
 
   if (interaction.commandName === 'relatorio_global') {

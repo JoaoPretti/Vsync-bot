@@ -122,6 +122,43 @@ async function buscarRelatoriosUsuario(usuarioId) {
   return result.rows;
 }
 
+async function buscarRelatorioSemanalGlobalMaisRecente() {
+  const semanaMaisRecenteResult = await db.query(`
+    SELECT semana_referencia
+    FROM relatorios_semanais
+    ORDER BY semana_referencia DESC
+    LIMIT 1
+  `);
+
+  const semanaReferencia = semanaMaisRecenteResult.rows[0]?.semana_referencia || null;
+
+  if (!semanaReferencia) {
+    return {
+      semanaReferencia: null,
+      relatorios: [],
+    };
+  }
+
+  const result = await db.query(
+    `
+      SELECT usuario_tag, usuario_id, total_itens
+      FROM relatorios_semanais
+      WHERE semana_referencia = $1
+      ORDER BY total_itens DESC, usuario_tag ASC
+    `,
+    [semanaReferencia]
+  );
+
+  return {
+    semanaReferencia,
+    relatorios: result.rows.map((row) => ({
+      usuario_tag: row.usuario_tag,
+      usuario_id: row.usuario_id,
+      total_itens: Number(row.total_itens || 0),
+    })),
+  };
+}
+
 async function manterUltimos52RelatoriosPorUsuario(usuarioId) {
   await db.query(
     `
@@ -736,6 +773,7 @@ module.exports = {
   buscarLavagemPorId,
   buscarParticipantesAcao,
   buscarRegistrosFarmPorUsuario,
+  buscarRelatorioSemanalGlobalMaisRecente,
   buscarRelatoriosUsuario,
   buscarResumoSemanalGlobal,
   buscarSolicitacaoCadastroPendentePorPersonagemId,

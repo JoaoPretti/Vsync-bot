@@ -128,6 +128,10 @@ async function buscarRelatoriosUsuario(usuarioId) {
   return repositories.buscarRelatoriosUsuario(usuarioId);
 }
 
+async function buscarRelatorioSemanalGlobalMaisRecente() {
+  return repositories.buscarRelatorioSemanalGlobalMaisRecente();
+}
+
 async function buscarResumoSemanalGlobal() {
   return repositories.buscarResumoSemanalGlobal();
 }
@@ -715,6 +719,7 @@ client.on('interactionCreate', async (interaction) =>
     buscarCadastroPorUsuario,
     buscarGrupoParceiroPorId,
     buscarGrupoParceiroPorNomeNormalizado,
+    buscarRelatorioSemanalGlobalMaisRecente,
     buscarRegistrosFarmPorUsuario,
     buscarRelatoriosUsuario,
     buscarResumoSemanalGlobal,
