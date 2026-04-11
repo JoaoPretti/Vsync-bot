@@ -17,6 +17,11 @@ const {
   ACAO_FINALIZAR_PREFIX,
   ACAO_SAIR_PREFIX,
   ACAO_SELECT_RESULTADO_PREFIX,
+  ADMIN_PARCERIA_CADASTRAR_BUTTON_ID,
+  ADMIN_PARCERIA_CADASTRAR_MODAL_ID,
+  ADMIN_PARCERIA_LISTAR_BUTTON_ID,
+  ADMIN_PARCERIA_REMOVER_BUTTON_ID,
+  ADMIN_PARCERIA_REMOVER_MODAL_ID,
   CADASTRO_APROVAR_PREFIX,
   CADASTRO_BUTTON_ID,
   CADASTRO_MODAL_ID,
@@ -30,6 +35,93 @@ const {
 
 function truncarTexto(texto, limite = 1900) {
   return texto.length <= limite ? texto : `${texto.slice(0, limite - 3)}...`;
+}
+
+function usuarioPodeGerenciarPainelAdministrativo(interaction) {
+  return Boolean(interaction.memberPermissions?.has(PermissionFlagsBits.Administrator));
+}
+
+async function responderListaGruposParceiros(interaction, listarGruposParceiros) {
+  const grupos = await listarGruposParceiros();
+
+  if (!grupos.length) {
+    return interaction.reply({
+      content: 'Nenhum grupo parceiro cadastrado até o momento.',
+      flags: MessageFlags.Ephemeral,
+    });
+  }
+
+  const linhas = grupos.map((grupo) => `- ${grupo.nome}`).join('\n');
+
+  return interaction.reply({
+    content: truncarTexto(`Grupos parceiros cadastrados:\n${linhas}`),
+    flags: MessageFlags.Ephemeral,
+  });
+}
+
+async function registrarGrupoParceiro(interaction, nome, context) {
+  const {
+    buscarGrupoParceiroPorNomeNormalizado,
+    normalizarNomeGrupoParceiro,
+    salvarGrupoParceiro,
+  } = context;
+  const nomeLimpo = nome.trim();
+  const nomeNormalizado = normalizarNomeGrupoParceiro(nomeLimpo);
+
+  if (!nomeNormalizado || nomeLimpo.length < 2) {
+    return interaction.reply({
+      content: 'Informe um nome de grupo parceiro válido.',
+      flags: MessageFlags.Ephemeral,
+    });
+  }
+
+  const grupoExistente = await buscarGrupoParceiroPorNomeNormalizado(nomeNormalizado);
+
+  if (grupoExistente) {
+    return interaction.reply({
+      content: `O grupo parceiro **${grupoExistente.nome}** já está cadastrado.`,
+      flags: MessageFlags.Ephemeral,
+    });
+  }
+
+  const grupo = await salvarGrupoParceiro({
+    nome: nomeLimpo,
+    nomeNormalizado,
+    criadoPorId: interaction.user.id,
+    criadoPorTag: interaction.user.tag,
+    criadoEm: new Date(),
+    atualizadoEm: new Date(),
+  });
+
+  return interaction.reply({
+    content: `Grupo parceiro **${grupo.nome}** cadastrado com sucesso.`,
+    flags: MessageFlags.Ephemeral,
+  });
+}
+
+async function removerGrupoParceiroPorNome(interaction, nome, context) {
+  const {
+    buscarGrupoParceiroPorNomeNormalizado,
+    normalizarNomeGrupoParceiro,
+    removerGrupoParceiro,
+  } = context;
+  const grupo = await buscarGrupoParceiroPorNomeNormalizado(
+    normalizarNomeGrupoParceiro(nome.trim())
+  );
+
+  if (!grupo) {
+    return interaction.reply({
+      content: 'Não encontrei um grupo parceiro com esse nome.',
+      flags: MessageFlags.Ephemeral,
+    });
+  }
+
+  await removerGrupoParceiro(grupo.id);
+
+  return interaction.reply({
+    content: `Grupo parceiro **${grupo.nome}** removido com sucesso.`,
+    flags: MessageFlags.Ephemeral,
+  });
 }
 
 function criarPayloadRegistroFarm({ item, quantidade, usuarioId, imagem, imagemEmbed }) {
@@ -201,6 +293,7 @@ async function processarComando(interaction, context) {
     criarPainel,
     listarGruposParceiros,
     normalizarNomeGrupoParceiro,
+    publicarOuAtualizarPainelAdministrativo,
     publicarOuAtualizarPainelAcoes,
     publicarOuAtualizarPainelCadastro,
     processarRelatorioSemanal,
@@ -238,6 +331,22 @@ async function processarComando(interaction, context) {
 
     return interaction.reply({
       content: `Painel de cadastro sincronizado no canal <#${process.env.PAINEL_CADASTRO_CANAL_ID}>.`,
+      flags: MessageFlags.Ephemeral,
+    });
+  }
+
+  if (interaction.commandName === 'painel_administrativo') {
+    if (!usuarioPodeGerenciarPainelAdministrativo(interaction)) {
+      return interaction.reply({
+        content: 'Você não tem permissão para publicar o painel administrativo.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    await publicarOuAtualizarPainelAdministrativo(interaction.channel);
+
+    return interaction.reply({
+      content: `Painel administrativo sincronizado no canal <#${interaction.channelId}>.`,
       flags: MessageFlags.Ephemeral,
     });
   }
@@ -295,96 +404,44 @@ async function processarComando(interaction, context) {
   }
 
   if (interaction.commandName === 'registrar_grupo_parceiro') {
-    if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+    if (!usuarioPodeGerenciarPainelAdministrativo(interaction)) {
       return interaction.reply({
         content: 'Você não tem permissão para cadastrar grupos parceiros.',
         flags: MessageFlags.Ephemeral,
       });
     }
 
-    const nome = interaction.options.getString('nome', true).trim();
-    const nomeNormalizado = normalizarNomeGrupoParceiro(nome);
-
-    if (!nomeNormalizado || nome.length < 2) {
-      return interaction.reply({
-        content: 'Informe um nome de grupo parceiro válido.',
-        flags: MessageFlags.Ephemeral,
-      });
-    }
-
-    const grupoExistente = await buscarGrupoParceiroPorNomeNormalizado(nomeNormalizado);
-
-    if (grupoExistente) {
-      return interaction.reply({
-        content: `O grupo parceiro **${grupoExistente.nome}** já está cadastrado.`,
-        flags: MessageFlags.Ephemeral,
-      });
-    }
-
-    const grupo = await salvarGrupoParceiro({
-      nome,
-      nomeNormalizado,
-      criadoPorId: interaction.user.id,
-      criadoPorTag: interaction.user.tag,
-      criadoEm: new Date(),
-      atualizadoEm: new Date(),
-    });
-
-    return interaction.reply({
-      content: `Grupo parceiro **${grupo.nome}** cadastrado com sucesso.`,
-      flags: MessageFlags.Ephemeral,
+    return registrarGrupoParceiro(interaction, interaction.options.getString('nome', true), {
+      buscarGrupoParceiroPorNomeNormalizado,
+      normalizarNomeGrupoParceiro,
+      salvarGrupoParceiro,
     });
   }
 
   if (interaction.commandName === 'remover_grupo_parceiro') {
-    if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+    if (!usuarioPodeGerenciarPainelAdministrativo(interaction)) {
       return interaction.reply({
         content: 'Você não tem permissão para remover grupos parceiros.',
         flags: MessageFlags.Ephemeral,
       });
     }
 
-    const nome = interaction.options.getString('nome', true).trim();
-    const grupo = await buscarGrupoParceiroPorNomeNormalizado(normalizarNomeGrupoParceiro(nome));
-
-    if (!grupo) {
-      return interaction.reply({
-        content: 'Não encontrei um grupo parceiro com esse nome.',
-        flags: MessageFlags.Ephemeral,
-      });
-    }
-
-    await removerGrupoParceiro(grupo.id);
-
-    return interaction.reply({
-      content: `Grupo parceiro **${grupo.nome}** removido com sucesso.`,
-      flags: MessageFlags.Ephemeral,
+    return removerGrupoParceiroPorNome(interaction, interaction.options.getString('nome', true), {
+      buscarGrupoParceiroPorNomeNormalizado,
+      normalizarNomeGrupoParceiro,
+      removerGrupoParceiro,
     });
   }
 
   if (interaction.commandName === 'listar_grupos_parceiros') {
-    if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+    if (!usuarioPodeGerenciarPainelAdministrativo(interaction)) {
       return interaction.reply({
         content: 'Você não tem permissão para listar grupos parceiros.',
         flags: MessageFlags.Ephemeral,
       });
     }
 
-    const grupos = await listarGruposParceiros();
-
-    if (!grupos.length) {
-      return interaction.reply({
-        content: 'Nenhum grupo parceiro cadastrado até o momento.',
-        flags: MessageFlags.Ephemeral,
-      });
-    }
-
-    const linhas = grupos.map((grupo) => `- ${grupo.nome}`).join('\n');
-
-    return interaction.reply({
-      content: truncarTexto(`Grupos parceiros cadastrados:\n${linhas}`),
-      flags: MessageFlags.Ephemeral,
-    });
+    return responderListaGruposParceiros(interaction, listarGruposParceiros);
   }
 
   if (interaction.commandName === 'registrar_farm') {
@@ -529,16 +586,50 @@ async function processarComando(interaction, context) {
 async function processarModal(interaction, context) {
   const {
     buscarGrupoParceiroPorId,
+    buscarGrupoParceiroPorNomeNormalizado,
     client,
     formatarMoeda,
     montarPayloadRascunhoAcao,
+    normalizarNomeGrupoParceiro,
     obterRascunhoAcao,
     processarCadastro,
     processarModalLavagem,
+    removerGrupoParceiro,
+    salvarGrupoParceiro,
   } = context;
 
   if (interaction.customId === CADASTRO_MODAL_ID) {
     return processarCadastro(interaction, client);
+  }
+
+  if (interaction.customId === ADMIN_PARCERIA_CADASTRAR_MODAL_ID) {
+    if (!usuarioPodeGerenciarPainelAdministrativo(interaction)) {
+      return interaction.reply({
+        content: 'Você não tem permissão para cadastrar grupos parceiros.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    return registrarGrupoParceiro(interaction, interaction.fields.getTextInputValue('nome'), {
+      buscarGrupoParceiroPorNomeNormalizado,
+      normalizarNomeGrupoParceiro,
+      salvarGrupoParceiro,
+    });
+  }
+
+  if (interaction.customId === ADMIN_PARCERIA_REMOVER_MODAL_ID) {
+    if (!usuarioPodeGerenciarPainelAdministrativo(interaction)) {
+      return interaction.reply({
+        content: 'Você não tem permissão para remover grupos parceiros.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    return removerGrupoParceiroPorNome(interaction, interaction.fields.getTextInputValue('nome'), {
+      buscarGrupoParceiroPorNomeNormalizado,
+      normalizarNomeGrupoParceiro,
+      removerGrupoParceiro,
+    });
   }
 
   if (interaction.customId === `${LAVAGEM_MODAL_PREFIX}parceria`) {
@@ -611,12 +702,14 @@ async function processarBotao(interaction, context) {
   const {
     aprovarOuRecusarCadastro,
     client,
+    criarModalCadastrarParceria,
     formatarMoeda,
     buscarAcaoPorId,
     buscarRegistrosFarmPorUsuario,
     criarModalCadastro,
     criarModalDetalhesRascunhoAcao,
     criarModalLavagem,
+    criarModalRemoverParceria,
     criarRascunhoAcao,
     finalizarAcao,
     finalizarLavagem,
@@ -636,6 +729,39 @@ async function processarBotao(interaction, context) {
 
   if (interaction.customId === CADASTRO_BUTTON_ID) {
     return interaction.showModal(criarModalCadastro());
+  }
+
+  if (interaction.customId === ADMIN_PARCERIA_CADASTRAR_BUTTON_ID) {
+    if (!usuarioPodeGerenciarPainelAdministrativo(interaction)) {
+      return interaction.reply({
+        content: 'Você não tem permissão para cadastrar grupos parceiros.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    return interaction.showModal(criarModalCadastrarParceria());
+  }
+
+  if (interaction.customId === ADMIN_PARCERIA_LISTAR_BUTTON_ID) {
+    if (!usuarioPodeGerenciarPainelAdministrativo(interaction)) {
+      return interaction.reply({
+        content: 'Você não tem permissão para listar grupos parceiros.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    return responderListaGruposParceiros(interaction, listarGruposParceiros);
+  }
+
+  if (interaction.customId === ADMIN_PARCERIA_REMOVER_BUTTON_ID) {
+    if (!usuarioPodeGerenciarPainelAdministrativo(interaction)) {
+      return interaction.reply({
+        content: 'Você não tem permissão para remover grupos parceiros.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    return interaction.showModal(criarModalRemoverParceria());
   }
 
   if (interaction.customId.startsWith(CADASTRO_APROVAR_PREFIX)) {

@@ -46,6 +46,11 @@ const commands = [
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
 
   new SlashCommandBuilder()
+    .setName('painel_administrativo')
+    .setDescription('Publica o painel administrativo neste canal')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+  new SlashCommandBuilder()
     .setName('editar_cadastro')
     .setDescription('Edita o cadastro de um membro')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)

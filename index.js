@@ -44,6 +44,11 @@ const {
   enviarMensagemCanalCadastro,
   processarCadastro,
 } = require('./app/cadastro');
+const {
+  criarModalCadastrarParceria,
+  criarModalRemoverParceria,
+  criarPainelAdministrativo,
+} = require('./app/admin');
 const { processarInteracao } = require('./app/interactions');
 const {
   criarModalLavagem,
@@ -54,9 +59,13 @@ const {
   processarModalLavagem,
 } = require('./app/lavagem');
 const {
+  ADMIN_PARCERIA_CADASTRAR_BUTTON_ID,
+  ADMIN_PARCERIA_LISTAR_BUTTON_ID,
+  ADMIN_PARCERIA_REMOVER_BUTTON_ID,
   CANAL_LOG_ACOES_ID,
   CADASTRO_BUTTON_ID,
   PAINEL_ACOES_CANAL_ID,
+  PAINEL_ADMINISTRATIVO_CANAL_ID,
   PAINEL_CADASTRO_CANAL_ID,
   PAINEL_PRINCIPAL_CANAL_ID,
   PAINEL_THUMBNAIL_URL,
@@ -375,6 +384,55 @@ async function publicarOuAtualizarPainelCadastro() {
   await canal.send(payload);
 }
 
+async function publicarOuAtualizarPainelAdministrativo(canal) {
+  if (!canal || canal.type !== ChannelType.GuildText) {
+    throw new Error('Canal do painel administrativo não encontrado ou inválido.');
+  }
+
+  const painel = criarPainelAdministrativo();
+  const mensagens = await canal.messages.fetch({ limit: 30 });
+  const mensagemExistente = mensagens.find(
+    (message) =>
+      message.author.id === client.user.id &&
+      (message.embeds.some(
+        (embed) => embed.title === 'Painel Administrativo para gerentes e donos'
+      ) ||
+        mensagemPossuiAlgumCustomId(message, [
+          ADMIN_PARCERIA_CADASTRAR_BUTTON_ID,
+          ADMIN_PARCERIA_LISTAR_BUTTON_ID,
+          ADMIN_PARCERIA_REMOVER_BUTTON_ID,
+        ]))
+  );
+
+  const payload = {
+    embeds: painel.embeds,
+    flags: painel.flags,
+    components: painel.components,
+  };
+
+  if (mensagemExistente) {
+    await mensagemExistente.edit(payload);
+    return mensagemExistente;
+  }
+
+  return canal.send(payload);
+}
+
+async function publicarOuAtualizarPainelAdministrativoPersistente() {
+  if (!PAINEL_ADMINISTRATIVO_CANAL_ID) {
+    return;
+  }
+
+  const canal = await client.channels.fetch(PAINEL_ADMINISTRATIVO_CANAL_ID).catch(() => null);
+
+  if (!canal || canal.type !== ChannelType.GuildText) {
+    console.error('Canal do painel administrativo não encontrado ou inválido.');
+    return;
+  }
+
+  await publicarOuAtualizarPainelAdministrativo(canal);
+}
+
 async function renderizarMensagemAcao(interactionOrChannel, acaoId, desabilitado = false) {
   const acao = await buscarAcaoPorId(acaoId);
 
@@ -545,6 +603,10 @@ client.once('clientReady', () => {
   publicarOuAtualizarPainelAcoes().catch((error) => {
     console.error('Erro ao publicar o painel de ações persistente:', error);
   });
+
+  publicarOuAtualizarPainelAdministrativoPersistente().catch((error) => {
+    console.error('Erro ao publicar o painel administrativo persistente:', error);
+  });
 });
 
 client.on('guildMemberRemove', async (member) => {
@@ -663,9 +725,11 @@ client.on('interactionCreate', async (interaction) =>
     buscarRelatoriosUsuario,
     buscarResumoSemanalGlobal,
     client,
+    criarModalCadastrarParceria,
     criarModalCadastro,
     criarModalDetalhesRascunhoAcao,
     criarModalLavagem,
+    criarModalRemoverParceria,
     criarPainel,
     criarPainelCadastro,
     criarRascunhoAcao,
@@ -682,6 +746,7 @@ client.on('interactionCreate', async (interaction) =>
     processarCadastro,
     processarModalLavagem,
     processarRelatorioSemanal,
+    publicarOuAtualizarPainelAdministrativo,
     publicarOuAtualizarPainelAcoes,
     publicarOuAtualizarPainelCadastro,
     rascunhoAcaoEstaPronto,
