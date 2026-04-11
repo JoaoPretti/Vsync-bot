@@ -69,7 +69,7 @@ function criarModalCadastro() {
     .setStyle(TextInputStyle.Short)
     .setRequired(true)
     .setMaxLength(60)
-    .setPlaceholder('Ex.: Caruso Scofield');
+    .setPlaceholder('Ex.: Fulano Ciclano');
 
   const idInput = new TextInputBuilder()
     .setCustomId('personagem_id')
@@ -77,7 +77,7 @@ function criarModalCadastro() {
     .setStyle(TextInputStyle.Short)
     .setRequired(true)
     .setMaxLength(10)
-    .setPlaceholder('Ex.: 6001');
+    .setPlaceholder('Ex.: 1234');
 
   modal.addComponents(
     new ActionRowBuilder().addComponents(nomeInput),
@@ -454,7 +454,7 @@ async function enviarMensagemCanalCadastro(
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         [
-          `Salve <@${usuarioId}> | ${personagemId} 🤜`,
+          `Salve <@${usuarioId}> 🤜`,
           '',
           descricaoFinal,
           '',
