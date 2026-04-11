@@ -415,7 +415,7 @@ async function publicarOuAtualizarPainelAdministrativo(canal) {
   const saldoBanco = formatarMoeda(await buscarSaldoBanco());
   const painel = criarPainelAdministrativo(saldoBanco);
   const mensagens = await canal.messages.fetch({ limit: 30 });
-  const mensagemExistente = mensagens.find(
+  const mensagensExistentes = mensagens.filter(
     (message) =>
       message.author.id === client.user.id &&
       mensagemPossuiAlgumCustomId(message, [
@@ -434,9 +434,20 @@ async function publicarOuAtualizarPainelAdministrativo(canal) {
     components: painel.components,
   };
 
-  if (mensagemExistente) {
-    await mensagemExistente.edit(payload);
-    return mensagemExistente;
+  if (mensagensExistentes.size) {
+    await Promise.all(
+      mensagensExistentes.map((message) =>
+        message.edit(payload).catch((error) => {
+          console.error(
+            `Erro ao atualizar painel administrativo na mensagem ${message.id}:`,
+            error
+          );
+          return null;
+        })
+      )
+    );
+
+    return mensagensExistentes.first() || null;
   }
 
   return canal.send(payload);
