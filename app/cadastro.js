@@ -454,7 +454,7 @@ async function enviarMensagemCanalCadastro(
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         [
-          `Salve <@${usuarioId}> | ${nomeFormatado} | ${personagemId} 🤜`,
+          `Salve <@${usuarioId}> | ${personagemId} 🤜`,
           '',
           descricaoFinal,
           '',
