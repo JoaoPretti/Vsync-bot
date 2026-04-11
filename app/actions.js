@@ -255,7 +255,6 @@ function criarPainelAcoes() {
     .addActionRowComponents(criarBotoesPainelAcoes());
 
   return {
-    identificador: 'painel_acoes_v2',
     embeds: [],
     flags: MessageFlags.IsComponentsV2,
     components: [container],

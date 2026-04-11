@@ -397,7 +397,7 @@ async function processarComando(interaction, context) {
   if (interaction.commandName === 'painel') {
     const painel = criarPainel();
     return interaction.reply({
-      embeds: [painel.embed],
+      embeds: painel.embeds,
       components: painel.components,
       flags: MessageFlags.Ephemeral,
     });

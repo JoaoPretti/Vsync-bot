@@ -293,8 +293,7 @@ async function publicarOuAtualizarPainelPrincipal() {
   const mensagemExistente = mensagens.find(
     (message) =>
       message.author.id === client.user.id &&
-      (message.embeds.some((embed) => embed.title === 'Painel para Membros') ||
-        mensagemPossuiAlgumCustomId(message, ['farm', 'lavagem_parceria', 'lavagem_pista']))
+      mensagemPossuiAlgumCustomId(message, ['farm', 'lavagem_parceria', 'lavagem_pista'])
   );
 
   const payload = {
@@ -328,8 +327,7 @@ async function publicarOuAtualizarPainelAcoes() {
   const mensagemExistente = mensagens.find(
     (message) =>
       message.author.id === client.user.id &&
-      (message.embeds.some((embed) => embed.title === 'Criar relatorio de acao') ||
-        mensagemPossuiAlgumCustomId(message, ['acao_pequena', 'acao_media', 'acao_grande']))
+      mensagemPossuiAlgumCustomId(message, ['acao_pequena', 'acao_media', 'acao_grande'])
   );
 
   const payload = {
@@ -363,8 +361,7 @@ async function publicarOuAtualizarPainelCadastro() {
   const mensagensExistentes = mensagens.filter(
     (message) =>
       message.author.id === client.user.id &&
-      (message.embeds.some((embed) => embed.title === 'Registro no Discord') ||
-        mensagemPossuiAlgumCustomId(message, [CADASTRO_BUTTON_ID]))
+      mensagemPossuiAlgumCustomId(message, [CADASTRO_BUTTON_ID])
   );
 
   const payload = {
@@ -394,14 +391,11 @@ async function publicarOuAtualizarPainelAdministrativo(canal) {
   const mensagemExistente = mensagens.find(
     (message) =>
       message.author.id === client.user.id &&
-      (message.embeds.some(
-        (embed) => embed.title === 'Painel Administrativo para gerentes e donos'
-      ) ||
-        mensagemPossuiAlgumCustomId(message, [
-          ADMIN_PARCERIA_CADASTRAR_BUTTON_ID,
-          ADMIN_PARCERIA_LISTAR_BUTTON_ID,
-          ADMIN_PARCERIA_REMOVER_BUTTON_ID,
-        ]))
+      mensagemPossuiAlgumCustomId(message, [
+        ADMIN_PARCERIA_CADASTRAR_BUTTON_ID,
+        ADMIN_PARCERIA_LISTAR_BUTTON_ID,
+        ADMIN_PARCERIA_REMOVER_BUTTON_ID,
+      ])
   );
 
   const payload = {

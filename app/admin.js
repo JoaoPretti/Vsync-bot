@@ -20,7 +20,6 @@ const {
   ADMIN_PARCERIA_REMOVER_BUTTON_ID,
   ADMIN_PARCERIA_REMOVER_MODAL_ID,
   CADASTRO_THUMBNAIL_URL,
-  PAINEL_ADMINISTRATIVO_ID,
 } = require('../config/constants');
 
 function criarBotao(customId, label, emoji, disabled = false) {
@@ -95,7 +94,6 @@ function criarPainelAdministrativo() {
     );
 
   return {
-    identificador: PAINEL_ADMINISTRATIVO_ID,
     embeds: [],
     flags: MessageFlags.IsComponentsV2,
     components: [container],

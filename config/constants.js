@@ -15,7 +15,6 @@ const CANAL_REGISTRO_LAVAGEM_ID = process.env.CANAL_REGISTRO_LAVAGEM_ID || '1487
 const LAVAGEM_MODAL_PREFIX = 'modal_lavagem_';
 const LAVAGEM_APROVAR_PREFIX = 'aprovar_lavagem_';
 const LAVAGEM_RECUSAR_PREFIX = 'recusar_lavagem_';
-const PAINEL_ADMINISTRATIVO_ID = 'painel_administrativo_v1';
 const ADMIN_PARCERIA_CADASTRAR_BUTTON_ID = 'admin_parceria_cadastrar';
 const ADMIN_PARCERIA_LISTAR_BUTTON_ID = 'admin_parceria_listar';
 const ADMIN_PARCERIA_REMOVER_BUTTON_ID = 'admin_parceria_remover';
@@ -113,7 +112,6 @@ module.exports = {
   LAVAGEM_MODAL_PREFIX,
   LAVAGEM_RECUSAR_PREFIX,
   PAINEL_ADMINISTRATIVO_CANAL_ID,
-  PAINEL_ADMINISTRATIVO_ID,
   PAINEL_ACOES_CANAL_ID,
   PAINEL_CADASTRO_CANAL_ID,
   PAINEL_PRINCIPAL_CANAL_ID,

@@ -126,7 +126,6 @@ function criarPainelCadastro() {
     .addActionRowComponents(row);
 
   return {
-    identificador: 'painel_cadastro_v2',
     embeds: [],
     flags: MessageFlags.IsComponentsV2,
     components: [container],
