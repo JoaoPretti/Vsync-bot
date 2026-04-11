@@ -479,7 +479,7 @@ async function processarCadastro(interaction, client) {
   if (!interaction.inGuild()) {
     return interaction.reply({
       content: 'Esse cadastro só pode ser feito dentro do servidor.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
@@ -488,7 +488,7 @@ async function processarCadastro(interaction, client) {
   if (!canalAprovacaoId) {
     return interaction.reply({
       content: 'O canal de aprovação de cadastro ainda não foi configurado.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
@@ -496,7 +496,7 @@ async function processarCadastro(interaction, client) {
   const personagemId = interaction.fields.getTextInputValue('personagem_id').trim();
   const nomeFormatado = capitalizarNomePersonagem(nomeBruto);
 
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   try {
     if (!nomeFormatado || nomeFormatado.length < 3) {
@@ -585,7 +585,7 @@ async function aprovarOuRecusarCadastro(interaction, solicitacaoId, acao) {
   if (!usuarioPodeGerenciarCadastro(interaction)) {
     return interaction.reply({
       content: 'Você não tem permissão para gerenciar cadastros.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
@@ -594,18 +594,18 @@ async function aprovarOuRecusarCadastro(interaction, solicitacaoId, acao) {
   if (!solicitacao) {
     return interaction.reply({
       content: 'Não encontrei essa solicitação de cadastro.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
   if (solicitacao.status !== 'pendente') {
     return interaction.reply({
       content: `Essa solicitação já foi ${solicitacao.status}.`,
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   if (acao === 'aprovar') {
     const solicitacaoAprovada = await aprovarSolicitacaoCadastro(solicitacaoId, interaction.user);

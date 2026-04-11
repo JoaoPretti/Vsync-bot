@@ -407,7 +407,7 @@ async function finalizarAcao(interaction, acaoId) {
   if (!acao) {
     return interaction.reply({
       content: 'Não encontrei essa ação.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
@@ -416,21 +416,21 @@ async function finalizarAcao(interaction, acaoId) {
   if (!acao.nome_acao || !acao.tipo_acao || !acao.resultado) {
     return interaction.reply({
       content: 'Defina a ação, o tipo e o resultado antes de finalizar.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
   if (!acao.comando_texto) {
     return interaction.reply({
       content: 'É necessário que alguém assuma o comando da ação antes de finalizar.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
   if (!participantes.length) {
     return interaction.reply({
       content: 'É necessário ter ao menos um participante confirmado para finalizar.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
@@ -443,7 +443,7 @@ async function finalizarAcao(interaction, acaoId) {
   if (!canalLog || canalLog.type !== ChannelType.GuildText) {
     return interaction.reply({
       content: 'Não encontrei o canal de log de ações configurado.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
@@ -468,7 +468,7 @@ async function finalizarAcao(interaction, acaoId) {
 
   return interaction.reply({
     content: 'Ação finalizada e log registrado com sucesso.',
-    ephemeral: true,
+    flags: MessageFlags.Ephemeral,
   });
 }
 

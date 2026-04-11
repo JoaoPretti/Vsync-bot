@@ -343,21 +343,21 @@ async function processarModalLavagem(interaction, tipo, client, grupoParceiro = 
   if (!/^\d+$/.test(quantidadeTexto)) {
     return interaction.reply({
       content: 'A quantidade para lavar deve conter apenas numeros inteiros.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
   if (!/^\d+$/.test(personagemId)) {
     return interaction.reply({
       content: 'O ID do personagem deve conter apenas numeros.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
   if (!grupo || grupo.length < 2) {
     return interaction.reply({
       content: 'Informe um grupo valido.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
@@ -366,12 +366,12 @@ async function processarModalLavagem(interaction, tipo, client, grupoParceiro = 
   if (quantidade <= 0) {
     return interaction.reply({
       content: 'A quantidade para lavar deve ser maior que zero.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
   const valores = calcularValoresLavagem(quantidade, config.taxaPercentual);
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const lavagem = await salvarLavagem({
     tipo: config.tipo,
@@ -409,18 +409,18 @@ async function finalizarLavagem(interaction, lavagemId, acao, client) {
   if (!lavagem) {
     return interaction.reply({
       content: 'Nao encontrei essa solicitacao de lavagem.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
   if (lavagem.status !== 'pendente') {
     return interaction.reply({
       content: `Essa lavagem ja foi ${lavagem.status}.`,
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const lavagemAtualizada =
     acao === 'aprovar'
