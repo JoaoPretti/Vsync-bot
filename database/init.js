@@ -151,6 +151,30 @@ async function initDatabase() {
     )
   `);
 
+  console.log('INIT 4.06 - criando tabela registros_bancarios');
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS registros_bancarios (
+      id SERIAL PRIMARY KEY,
+      tipo TEXT NOT NULL,
+      quantidade INTEGER NOT NULL,
+      motivo TEXT NOT NULL,
+      data_informada TEXT,
+      usuario_id TEXT NOT NULL,
+      usuario_tag TEXT NOT NULL,
+      criado_em TIMESTAMP NOT NULL
+    )
+  `);
+
+  await db.query(`
+    ALTER TABLE registros_bancarios
+    ADD COLUMN IF NOT EXISTS data_informada TEXT
+  `);
+
+  await db.query(`
+    ALTER TABLE registros_bancarios
+    ALTER COLUMN data_informada DROP NOT NULL
+  `);
+
   console.log('INIT 4.1 - criando tabela cadastro_solicitacoes');
   await db.query(`
     CREATE TABLE IF NOT EXISTS cadastro_solicitacoes (
@@ -227,6 +251,13 @@ async function initDatabase() {
     `
       CREATE INDEX IF NOT EXISTS idx_grupos_parceiros_nome
       ON grupos_parceiros (nome)
+    `
+  );
+  await criarIndice(
+    'idx_registros_bancarios_tipo_criado_em',
+    `
+      CREATE INDEX IF NOT EXISTS idx_registros_bancarios_tipo_criado_em
+      ON registros_bancarios (tipo, criado_em DESC)
     `
   );
   await criarIndice(
@@ -339,6 +370,21 @@ async function initDatabase() {
          OR dinheiro <= 0
     `,
     aviso: 'existem ações com quantidade_participantes ou dinheiro inválidos',
+  });
+
+  await criarCheckConstraintSePossivel({
+    nome: 'chk_registros_bancarios_quantidade_positiva',
+    alterTableSql: `
+      ALTER TABLE registros_bancarios
+      ADD CONSTRAINT chk_registros_bancarios_quantidade_positiva
+      CHECK (quantidade > 0)
+    `,
+    validacaoSql: `
+      SELECT COUNT(*) AS total
+      FROM registros_bancarios
+      WHERE quantidade <= 0
+    `,
+    aviso: 'existem registros bancarios com quantidade invalida',
   });
 
   console.log('INIT 6 - criando tabela acao_participantes');

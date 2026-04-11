@@ -17,6 +17,10 @@ const {
   ACAO_FINALIZAR_PREFIX,
   ACAO_SAIR_PREFIX,
   ACAO_SELECT_RESULTADO_PREFIX,
+  ADMIN_BANCO_ADICIONAR_BUTTON_ID,
+  ADMIN_BANCO_ADICIONAR_MODAL_ID,
+  ADMIN_BANCO_RETIRAR_BUTTON_ID,
+  ADMIN_BANCO_RETIRAR_MODAL_ID,
   ADMIN_PARCERIA_CADASTRAR_BUTTON_ID,
   ADMIN_PARCERIA_CADASTRAR_MODAL_ID,
   ADMIN_PARCERIA_LISTAR_BUTTON_ID,
@@ -121,6 +125,74 @@ async function removerGrupoParceiroPorNome(interaction, nome, context) {
   return interaction.reply({
     content: `Grupo parceiro **${grupo.nome}** removido com sucesso.`,
     flags: MessageFlags.Ephemeral,
+  });
+}
+
+async function registrarMovimentacaoBanco(interaction, tipo, context) {
+  const {
+    buscarSaldoBanco,
+    enviarLogRegistroBancario,
+    publicarOuAtualizarPainelAdministrativo,
+    salvarRegistroBancario,
+  } = context;
+  const quantidadeTexto = interaction.fields.getTextInputValue('quantidade').trim();
+  const motivo = interaction.fields.getTextInputValue('motivo').trim();
+
+  if (!/^\d+$/.test(quantidadeTexto) || Number(quantidadeTexto) <= 0) {
+    return interaction.reply({
+      content: 'A quantidade deve ser um numero inteiro maior que zero.',
+      flags: MessageFlags.Ephemeral,
+    });
+  }
+
+  if (!motivo || motivo.length < 3) {
+    return interaction.reply({
+      content: 'Informe um motivo valido para o registro bancario.',
+      flags: MessageFlags.Ephemeral,
+    });
+  }
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const criadoEm = new Date();
+
+  const registro = await salvarRegistroBancario({
+    tipo,
+    quantidade: Number(quantidadeTexto),
+    motivo,
+    usuarioId: interaction.user.id,
+    usuarioTag: interaction.user.tag,
+    criadoEm,
+  });
+
+  const saldoAtual = await buscarSaldoBanco();
+
+  await enviarLogRegistroBancario({
+    tipo,
+    quantidade: registro.quantidade,
+    motivo: registro.motivo,
+    criadoEm: criadoEm.toLocaleString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }),
+    usuarioId: registro.usuario_id,
+    saldoAtual,
+  });
+
+  if (interaction.channel) {
+    await publicarOuAtualizarPainelAdministrativo(interaction.channel).catch(() => null);
+  }
+
+  return interaction.editReply({
+    content:
+      tipo === 'adicao'
+        ? 'Valor adicionado registrado com sucesso.'
+        : 'Valor retirado registrado com sucesso.',
   });
 }
 
@@ -592,16 +664,20 @@ async function processarComando(interaction, context) {
 
 async function processarModal(interaction, context) {
   const {
+    buscarSaldoBanco,
     buscarGrupoParceiroPorId,
     buscarGrupoParceiroPorNomeNormalizado,
     client,
+    enviarLogRegistroBancario,
     formatarMoeda,
     montarPayloadRascunhoAcao,
     normalizarNomeGrupoParceiro,
     obterRascunhoAcao,
     processarCadastro,
     processarModalLavagem,
+    publicarOuAtualizarPainelAdministrativo,
     removerGrupoParceiro,
+    salvarRegistroBancario,
     salvarGrupoParceiro,
   } = context;
 
@@ -636,6 +712,38 @@ async function processarModal(interaction, context) {
       buscarGrupoParceiroPorNomeNormalizado,
       normalizarNomeGrupoParceiro,
       removerGrupoParceiro,
+    });
+  }
+
+  if (interaction.customId === ADMIN_BANCO_ADICIONAR_MODAL_ID) {
+    if (!usuarioPodeGerenciarPainelAdministrativo(interaction)) {
+      return interaction.reply({
+        content: 'Você não tem permissão para registrar valores no banco.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    return registrarMovimentacaoBanco(interaction, 'adicao', {
+      buscarSaldoBanco,
+      enviarLogRegistroBancario,
+      publicarOuAtualizarPainelAdministrativo,
+      salvarRegistroBancario,
+    });
+  }
+
+  if (interaction.customId === ADMIN_BANCO_RETIRAR_MODAL_ID) {
+    if (!usuarioPodeGerenciarPainelAdministrativo(interaction)) {
+      return interaction.reply({
+        content: 'Você não tem permissão para registrar retiradas no banco.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    return registrarMovimentacaoBanco(interaction, 'retirada', {
+      buscarSaldoBanco,
+      enviarLogRegistroBancario,
+      publicarOuAtualizarPainelAdministrativo,
+      salvarRegistroBancario,
     });
   }
 
@@ -709,6 +817,8 @@ async function processarBotao(interaction, context) {
   const {
     aprovarOuRecusarCadastro,
     client,
+    criarModalBancoAdicionar,
+    criarModalBancoRetirar,
     criarModalCadastrarParceria,
     formatarMoeda,
     buscarAcaoPorId,
@@ -736,6 +846,28 @@ async function processarBotao(interaction, context) {
 
   if (interaction.customId === CADASTRO_BUTTON_ID) {
     return interaction.showModal(criarModalCadastro());
+  }
+
+  if (interaction.customId === ADMIN_BANCO_ADICIONAR_BUTTON_ID) {
+    if (!usuarioPodeGerenciarPainelAdministrativo(interaction)) {
+      return interaction.reply({
+        content: 'Você não tem permissão para registrar valores no banco.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    return interaction.showModal(criarModalBancoAdicionar());
+  }
+
+  if (interaction.customId === ADMIN_BANCO_RETIRAR_BUTTON_ID) {
+    if (!usuarioPodeGerenciarPainelAdministrativo(interaction)) {
+      return interaction.reply({
+        content: 'Você não tem permissão para registrar retiradas no banco.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    return interaction.showModal(criarModalBancoRetirar());
   }
 
   if (interaction.customId === ADMIN_PARCERIA_CADASTRAR_BUTTON_ID) {

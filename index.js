@@ -45,9 +45,12 @@ const {
   processarCadastro,
 } = require('./app/cadastro');
 const {
+  criarModalBancoAdicionar,
+  criarModalBancoRetirar,
   criarModalCadastrarParceria,
   criarModalRemoverParceria,
   criarPainelAdministrativo,
+  montarPayloadLogRegistroBancario,
 } = require('./app/admin');
 const { processarInteracao } = require('./app/interactions');
 const {
@@ -59,9 +62,14 @@ const {
   processarModalLavagem,
 } = require('./app/lavagem');
 const {
+  ADMIN_BANCO_ADICIONAR_BUTTON_ID,
+  ADMIN_BANCO_ADICIONAR_MODAL_ID,
+  ADMIN_BANCO_RETIRAR_BUTTON_ID,
+  ADMIN_BANCO_RETIRAR_MODAL_ID,
   ADMIN_PARCERIA_CADASTRAR_BUTTON_ID,
   ADMIN_PARCERIA_LISTAR_BUTTON_ID,
   ADMIN_PARCERIA_REMOVER_BUTTON_ID,
+  CANAL_LOG_BANCO_ID,
   CANAL_LOG_ACOES_ID,
   CADASTRO_BUTTON_ID,
   PAINEL_ACOES_CANAL_ID,
@@ -140,6 +148,10 @@ async function listarGruposParceiros() {
   return repositories.listarGruposParceiros();
 }
 
+async function buscarSaldoBanco() {
+  return repositories.buscarSaldoBanco();
+}
+
 async function buscarGrupoParceiroPorId(grupoId) {
   return repositories.buscarGrupoParceiroPorId(grupoId);
 }
@@ -150,6 +162,10 @@ async function buscarGrupoParceiroPorNomeNormalizado(nomeNormalizado) {
 
 async function salvarGrupoParceiro(dados) {
   return repositories.salvarGrupoParceiro(dados);
+}
+
+async function salvarRegistroBancario(dados) {
+  return repositories.salvarRegistroBancario(dados);
 }
 
 async function removerGrupoParceiro(grupoId) {
@@ -390,12 +406,15 @@ async function publicarOuAtualizarPainelAdministrativo(canal) {
     throw new Error('Canal do painel administrativo não encontrado ou inválido.');
   }
 
-  const painel = criarPainelAdministrativo();
+  const saldoBanco = formatarMoeda(await buscarSaldoBanco());
+  const painel = criarPainelAdministrativo(saldoBanco);
   const mensagens = await canal.messages.fetch({ limit: 30 });
   const mensagemExistente = mensagens.find(
     (message) =>
       message.author.id === client.user.id &&
       mensagemPossuiAlgumCustomId(message, [
+        ADMIN_BANCO_ADICIONAR_BUTTON_ID,
+        ADMIN_BANCO_RETIRAR_BUTTON_ID,
         ADMIN_PARCERIA_CADASTRAR_BUTTON_ID,
         ADMIN_PARCERIA_LISTAR_BUTTON_ID,
         ADMIN_PARCERIA_REMOVER_BUTTON_ID,
@@ -414,6 +433,22 @@ async function publicarOuAtualizarPainelAdministrativo(canal) {
   }
 
   return canal.send(payload);
+}
+
+async function enviarLogRegistroBancario(dados) {
+  const canalLog = await client.channels.fetch(CANAL_LOG_BANCO_ID).catch(() => null);
+
+  if (!canalLog || canalLog.type !== ChannelType.GuildText) {
+    throw new Error('Canal de log bancario nao encontrado ou invalido.');
+  }
+
+  await canalLog.send(
+    montarPayloadLogRegistroBancario({
+      ...dados,
+      saldoAtual: formatarMoeda(dados.saldoAtual),
+      quantidade: formatarMoeda(dados.quantidade),
+    })
+  );
 }
 
 async function publicarOuAtualizarPainelAdministrativoPersistente() {
@@ -711,6 +746,10 @@ client.on('interactionCreate', async (interaction) =>
     ACAO_RASCUNHO_MODAL_PREFIX,
     ACAO_RASCUNHO_NOME_PREFIX,
     ACAO_RASCUNHO_TIPO_PREFIX,
+    ADMIN_BANCO_ADICIONAR_BUTTON_ID,
+    ADMIN_BANCO_ADICIONAR_MODAL_ID,
+    ADMIN_BANCO_RETIRAR_BUTTON_ID,
+    ADMIN_BANCO_RETIRAR_MODAL_ID,
     adicionarParticipanteAcao,
     aplicarCadastroUsuario,
     aprovarOuRecusarCadastro,
@@ -723,7 +762,10 @@ client.on('interactionCreate', async (interaction) =>
     buscarRegistrosFarmPorUsuario,
     buscarRelatoriosUsuario,
     buscarResumoSemanalGlobal,
+    buscarSaldoBanco,
     client,
+    criarModalBancoAdicionar,
+    criarModalBancoRetirar,
     criarModalCadastrarParceria,
     criarModalCadastro,
     criarModalDetalhesRascunhoAcao,
@@ -732,6 +774,7 @@ client.on('interactionCreate', async (interaction) =>
     criarPainel,
     criarPainelCadastro,
     criarRascunhoAcao,
+    enviarLogRegistroBancario,
     finalizarAcao,
     finalizarLavagem,
     formatarMoeda,
@@ -756,6 +799,7 @@ client.on('interactionCreate', async (interaction) =>
     resolverUrlImagem,
     salvarAcao,
     salvarGrupoParceiro,
+    salvarRegistroBancario,
     salvarRegistroBanco,
   })
 );

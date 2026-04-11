@@ -687,6 +687,43 @@ async function removerGrupoParceiro(grupoId) {
   return result.rows[0] || null;
 }
 
+async function salvarRegistroBancario(dados) {
+  const result = await db.query(
+    `
+      INSERT INTO registros_bancarios (
+        tipo,
+        quantidade,
+        motivo,
+        usuario_id,
+        usuario_tag,
+        criado_em
+      ) VALUES ($1,$2,$3,$4,$5,$6)
+      RETURNING *
+    `,
+    [dados.tipo, dados.quantidade, dados.motivo, dados.usuarioId, dados.usuarioTag, dados.criadoEm]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function buscarSaldoBanco() {
+  const result = await db.query(`
+    SELECT COALESCE(
+      SUM(
+        CASE
+          WHEN tipo = 'adicao' THEN quantidade
+          WHEN tipo = 'retirada' THEN -quantidade
+          ELSE 0
+        END
+      ),
+      0
+    ) AS saldo
+    FROM registros_bancarios
+  `);
+
+  return Number(result.rows[0]?.saldo || 0);
+}
+
 async function atualizarMensagemAprovacaoLavagem(lavagemId, mensagemId, canalId) {
   await db.query(
     `
@@ -772,6 +809,7 @@ module.exports = {
   buscarGrupoParceiroPorNomeNormalizado,
   buscarLavagemPorId,
   buscarParticipantesAcao,
+  buscarSaldoBanco,
   buscarRegistrosFarmPorUsuario,
   buscarRelatorioSemanalGlobalMaisRecente,
   buscarRelatoriosUsuario,
@@ -790,6 +828,7 @@ module.exports = {
   resetarFarmUsuario,
   salvarAcao,
   salvarGrupoParceiro,
+  salvarRegistroBancario,
   salvarLavagem,
   salvarOuAtualizarCadastro,
   salvarSolicitacaoCadastro,
