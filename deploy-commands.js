@@ -3,11 +3,8 @@ require('dotenv').config();
 const { REST, Routes, SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 
 const ITENS = [
-  { name: 'Água', value: 'agua' },
-  { name: 'Hambúrguer', value: 'hamburguer' },
-  { name: 'Pizza', value: 'pizza' },
-  { name: 'Chocolate', value: 'chocolate' },
-  { name: 'Remédio', value: 'remedio' },
+  { name: 'Papel', value: 'papel' },
+  { name: 'Alvejante', value: 'alvejante' },
 ];
 
 const commands = [
