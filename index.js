@@ -378,7 +378,7 @@ async function publicarOuAtualizarPainelCadastro() {
   }
 
   const mensagens = await canal.messages.fetch({ limit: 100 });
-  const mensagensExistentes = mensagens.filter(
+  const mensagemExistente = mensagens.find(
     (message) =>
       message.author.id === client.user.id &&
       mensagemPossuiAlgumCustomId(message, [CADASTRO_BUTTON_ID])
@@ -390,12 +390,9 @@ async function publicarOuAtualizarPainelCadastro() {
     components: painel.components,
   };
 
-  if (mensagensExistentes.size) {
-    for (const mensagem of mensagensExistentes.values()) {
-      await mensagem.delete().catch((error) => {
-        console.error('Erro ao remover painel de cadastro antigo:', error);
-      });
-    }
+  if (mensagemExistente) {
+    await mensagemExistente.edit(payload);
+    return;
   }
 
   await canal.send(payload);
