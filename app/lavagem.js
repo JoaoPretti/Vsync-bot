@@ -131,9 +131,7 @@ function montarPayloadSelecaoGrupoParceiro(grupos) {
       new SectionBuilder()
         .addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            ['## Central de lavagem', 'Escolha abaixo qual grupo parceiro sera usado.'].join(
-              '\n'
-            )
+            ['## Central de lavagem', 'Escolha abaixo qual grupo parceiro sera usado.'].join('\n')
           )
         )
         .setThumbnailAccessory(criarThumbnailLavagem())
@@ -319,9 +317,7 @@ function criarContainerRegistroLavagem(lavagem) {
           `${notaFiscal}`,
           `**Status:**`,
           `${
-            lavagem.aprovado_por_id
-              ? `Confirmado por <@${lavagem.aprovado_por_id}>`
-              : 'Confirmado'
+            lavagem.aprovado_por_id ? `Confirmado por <@${lavagem.aprovado_por_id}>` : 'Confirmado'
           }`,
         ].join('\n')
       )
