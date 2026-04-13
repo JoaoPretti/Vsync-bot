@@ -94,7 +94,8 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName('testar_relatorio')
-    .setDescription('Executa manualmente o relatório semanal para teste'),
+    .setDescription('Executa manualmente o relatório semanal para teste')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   new SlashCommandBuilder()
     .setName('relatorio_global')

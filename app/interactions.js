@@ -45,7 +45,12 @@ function truncarTexto(texto, limite = 1900) {
 }
 
 function usuarioPodeGerenciarPainelAdministrativo(interaction) {
-  return Boolean(interaction.memberPermissions?.has(PermissionFlagsBits.Administrator));
+  const cargoGerenciaId = process.env.CARGO_GERENCIA_ID || '';
+
+  return Boolean(
+    interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) ||
+    (cargoGerenciaId && interaction.member?.roles?.cache?.has(cargoGerenciaId))
+  );
 }
 
 async function responderListaGruposParceiros(interaction, listarGruposParceiros) {
@@ -667,6 +672,13 @@ async function processarComando(interaction, context) {
   }
 
   if (interaction.commandName === 'testar_relatorio') {
+    if (!usuarioPodeGerenciarPainelAdministrativo(interaction)) {
+      return interaction.reply({
+        content: 'Você não tem permissão para executar o relatório manualmente.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
     await processarRelatorioSemanal();
 
     return interaction.reply({
@@ -1066,11 +1078,25 @@ async function processarBotao(interaction, context) {
   }
 
   if (interaction.customId.startsWith(LAVAGEM_APROVAR_PREFIX)) {
+    if (!usuarioPodeGerenciarPainelAdministrativo(interaction)) {
+      return interaction.reply({
+        content: 'Você não tem permissão para aprovar lavagens.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
     const lavagemId = Number(interaction.customId.slice(LAVAGEM_APROVAR_PREFIX.length));
     return finalizarLavagem(interaction, lavagemId, 'aprovar', client);
   }
 
   if (interaction.customId.startsWith(LAVAGEM_RECUSAR_PREFIX)) {
+    if (!usuarioPodeGerenciarPainelAdministrativo(interaction)) {
+      return interaction.reply({
+        content: 'Você não tem permissão para recusar lavagens.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
     const lavagemId = Number(interaction.customId.slice(LAVAGEM_RECUSAR_PREFIX.length));
     return finalizarLavagem(interaction, lavagemId, 'recusar', client);
   }

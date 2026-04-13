@@ -6,6 +6,7 @@ const {
   ContainerBuilder,
   MessageFlags,
   ModalBuilder,
+  PermissionFlagsBits,
   SectionBuilder,
   SeparatorBuilder,
   StringSelectMenuBuilder,
@@ -111,6 +112,15 @@ function normalizarNomeGrupoParceiro(nome) {
 
 function criarThumbnailLavagem() {
   return new ThumbnailBuilder().setURL(CADASTRO_THUMBNAIL_URL).setDescription('VSYNC');
+}
+
+function usuarioPodeGerenciarLavagens(interaction) {
+  const cargoGerenciaId = process.env.CARGO_GERENCIA_ID || '';
+
+  return Boolean(
+    interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) ||
+    (cargoGerenciaId && interaction.member?.roles?.cache?.has(cargoGerenciaId))
+  );
 }
 
 function montarPayloadSelecaoGrupoParceiro(grupos) {
@@ -404,6 +414,13 @@ async function processarModalLavagem(interaction, tipo, client, grupoParceiro = 
 }
 
 async function finalizarLavagem(interaction, lavagemId, acao, client) {
+  if (!usuarioPodeGerenciarLavagens(interaction)) {
+    return interaction.reply({
+      content: 'Voce nao tem permissao para aprovar ou recusar lavagens.',
+      flags: MessageFlags.Ephemeral,
+    });
+  }
+
   const lavagem = await buscarLavagemPorId(lavagemId);
 
   if (!lavagem) {
