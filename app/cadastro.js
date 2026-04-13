@@ -691,11 +691,7 @@ module.exports = {
   aplicarCadastroUsuario,
   aprovarOuRecusarCadastro,
   criarModalCadastro,
-  criarOuAtualizarCanalCadastro,
   criarPainelCadastro,
-  enviarLogCadastroAprovado,
   enviarMensagemCanalCadastro,
-  montarPayloadSolicitacaoCadastro,
   processarCadastro,
-  validarPersonagemIdDisponivel,
 };

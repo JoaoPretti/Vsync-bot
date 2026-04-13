@@ -482,7 +482,6 @@ module.exports = {
   criarModalLavagem,
   finalizarLavagem,
   LAVAGEM_PARCEIRO_SELECT_ID,
-  montarPayloadAprovacaoLavagem,
   montarPayloadSelecaoGrupoParceiro,
   normalizarNomeGrupoParceiro,
   processarModalLavagem,

@@ -34,21 +34,6 @@ function formatarMoeda(valor) {
   }).format(Number(valor || 0));
 }
 
-function normalizarTextoComandoAcao(texto) {
-  const valor = normalizarEspacos(texto);
-  const mencao = valor.match(/^<@!?(\d+)>$/);
-
-  if (mencao) {
-    return `<@${mencao[1]}>`;
-  }
-
-  if (/^\d+$/.test(valor)) {
-    return `<@${valor}>`;
-  }
-
-  return valor;
-}
-
 function possuiExtensaoImagem(url) {
   return /\.(png|jpe?g|gif|webp|bmp|svg)(?:\?.*)?$/i.test(url);
 }
@@ -142,7 +127,5 @@ module.exports = {
   formatarMoeda,
   gerarNomeCanalCadastro,
   normalizarEspacos,
-  normalizarTextoComandoAcao,
   resolverUrlImagem,
-  sanitizarNomeCanal,
 };
