@@ -431,7 +431,7 @@ function montarPayloadMensagemAcao(acao, participantes, formatarMoeda, desabilit
   };
 }
 
-function montarPayloadRascunhoConcluido(channelId) {
+function _montarPayloadRascunhoConcluido(channelId) {
   return {
     embeds: [],
     flags: MessageFlags.IsComponentsV2,
@@ -513,7 +513,6 @@ module.exports = {
   montarPayloadLogAcao,
   montarPayloadMensagemAcao,
   montarPayloadRascunhoAcao,
-  montarPayloadRascunhoConcluido,
   obterRascunhoAcao,
   rascunhoAcaoEstaPronto,
   removerRascunhoAcao,

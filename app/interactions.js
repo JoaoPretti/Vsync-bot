@@ -832,9 +832,8 @@ async function processarModal(interaction, context) {
     rascunho.quantidadeParticipantes = Number(quantidadeParticipantesTexto);
     rascunho.dinheiro = Number(dinheiroTexto);
 
-    return interaction.reply(
+    return interaction.update(
       montarPayloadRascunhoAcao(rascunho, formatarMoeda, {
-        flags: MessageFlags.Ephemeral,
         aviso: 'Detalhes atualizados. Revise o painel abaixo para concluir a criação da ação.',
       })
     );
@@ -866,7 +865,6 @@ async function processarBotao(interaction, context) {
     montarPayloadConfirmacaoResetBanco,
     montarPayloadSelecaoGrupoParceiro,
     montarPayloadRascunhoAcao,
-    montarPayloadRascunhoConcluido,
     obterRascunhoAcao,
     removerParticipanteAcao,
     removerRascunhoAcao,
@@ -1026,7 +1024,7 @@ async function processarBotao(interaction, context) {
       montarPayloadRascunhoAcao(
         criarRascunhoAcao(interaction.user.id, interaction.channelId, 'pequena'),
         formatarMoeda,
-        { flags: MessageFlags.Ephemeral }
+        { ephemeral: true }
       )
     );
   }
@@ -1036,7 +1034,7 @@ async function processarBotao(interaction, context) {
       montarPayloadRascunhoAcao(
         criarRascunhoAcao(interaction.user.id, interaction.channelId, 'media'),
         formatarMoeda,
-        { flags: MessageFlags.Ephemeral }
+        { ephemeral: true }
       )
     );
   }
@@ -1046,7 +1044,7 @@ async function processarBotao(interaction, context) {
       montarPayloadRascunhoAcao(
         criarRascunhoAcao(interaction.user.id, interaction.channelId, 'grande'),
         formatarMoeda,
-        { flags: MessageFlags.Ephemeral }
+        { ephemeral: true }
       )
     );
   }
@@ -1194,12 +1192,15 @@ async function processarBotao(interaction, context) {
       finalizadoEm: null,
     });
 
-    const mensagem = await renderizarMensagemAcao(interaction, acao.id);
+    await renderizarMensagemAcao(interaction, acao.id);
     removerRascunhoAcao(token);
-
-    return interaction.update(
-      montarPayloadRascunhoConcluido(mensagem ? interaction.channelId : null)
-    );
+    await interaction.update({
+      content: 'Ação publicada com sucesso.',
+      embeds: [],
+      components: [],
+    });
+    await interaction.deleteReply().catch(() => null);
+    return null;
   }
 
   if (interaction.customId === 'farm' || interaction.customId === 'painel_farm') {
