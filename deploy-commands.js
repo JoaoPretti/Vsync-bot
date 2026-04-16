@@ -5,6 +5,7 @@ const { REST, Routes, SlashCommandBuilder, PermissionFlagsBits } = require('disc
 const ITENS = [
   { name: 'Papel', value: 'papel' },
   { name: 'Alvejante', value: 'alvejante' },
+  { name: 'Dinheiro Sujo', value: 'dinheiro' },
 ];
 
 const commands = [
